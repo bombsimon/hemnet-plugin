@@ -6,7 +6,7 @@ Description: Scrape information from Hemnet
 Author: Simon Sawert
 Version: 1.0
 Author URI: http://sawert.se
-*/
+ */
 
 include_once '_inc/simple_html_dom.php';
 
@@ -62,10 +62,10 @@ class Hemnet extends WP_Widget {
             echo sprintf('<p class="estate fee">%s</p>', $estate['fee']);
 
             if (isset($estate['price-per-m2'])) {
-            	echo sprintf('<p class="estate price">%s (%s)</p>', $estate['price'], $estate['price-per-m2']);
+                echo sprintf('<p class="estate price">%s (%s)</p>', $estate['price'], $estate['price-per-m2']);
             } else {
                 // Might include "No price" information
-            	echo sprintf('<p class="estate price">%s</p>', $estate['price']);
+                echo sprintf('<p class="estate price">%s</p>', $estate['price']);
             }
 
             if ($instance['type'] == 'sold') {
@@ -197,10 +197,10 @@ class Hemnet extends WP_Widget {
             }
         }
 
-		// Return all (max 50) matches if no number filter is set
-		if (!count($exact_numbers))
-			return $objects;
-		
+        // Return all (max 50) matches if no number filter is set
+        if (!count($exact_numbers))
+            return $objects;
+
         // Fiter exact matches for specific numbers, still from the max 50 results
         $final = [];
         foreach ($objects as $obj) {
