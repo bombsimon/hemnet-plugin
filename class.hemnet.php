@@ -65,7 +65,7 @@ class Hemnet extends WP_Widget {
             echo sprintf('<p class="estate living-area">%s</p>', $estate['living-area']);
             echo sprintf('<p class="estate fee">%s</p>', $estate['fee']);
 
-            if (isset($estate['price-per-m2'])) {
+            if ($estate['price-per-m2']) {
                 echo sprintf('<p class="estate price">%s (%s)</p>', $estate['price'], $estate['price-per-m2']);
             } else {
                 // Might include "No price" information
@@ -170,6 +170,10 @@ class Hemnet extends WP_Widget {
 
         // Return empty object list if request fails
         if (!$dom)
+            return $objects;
+
+        // Fallback for errors
+        if (!$attributes)
             return $objects;
 
         // Loop over each result
