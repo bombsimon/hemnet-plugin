@@ -1,0 +1,12 @@
+.widget .estate {
+    padding: 0px;
+    margin: 0px;
+}
+
+.sold-date, .living-area, .fee, .price, .price-change {
+    font-size: 12px;
+}
+
+.estates {
+    padding-bottom: 20px;
+}
