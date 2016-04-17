@@ -1,11 +1,15 @@
 <?php
 /*
-Plugin Name: Hemnet
-Plugin URI: http://github.com?
-Description: Scrape information from Hemnet
-Author: Simon Sawert
-Version: 1.0
-Author URI: http://sawert.se
+Plugin Name:    Hemnet
+Plugin URI:     https://github.com/bombsimon/hemnet-plugin
+Description:    Scrape information from Hemnet
+Author:         Simon Sawert
+Version:        0.1.0
+Author URI:     http://sawert.se
+License:        GPL3
+License URI:    https://www.gnu.org/licenses/gpl-3.0.html
+Domain Path:    /languages
+Text Domain:    hemnet
  */
 
 include_once '_inc/simple_html_dom.php';
@@ -24,9 +28,9 @@ class Hemnet extends WP_Widget {
     function __construct() {
         parent::__construct(
             'Hemnet',
-            __('Hemnet', 'text_domain'),
+            __('Hemnet', 'hemnet'),
             array(
-                'description' => __('Scrape real estates from Hemnet', 'text_domain')
+                'description' => __('Scrape real estates from Hemnet', 'hemnet')
             )
         );
     }
@@ -41,8 +45,8 @@ class Hemnet extends WP_Widget {
         $hemnet_result = $this->scrape_hemnet($instance);
 
         $empty_text = array(
-            'for-sale'  => __('Det finns inga object till salu för tillfället.', 'text_domain'),
-            'sold'      => __('Det finns inga sålda objekt för tillfället.', 'text_domain')
+            'for-sale'  => __('Det finns inga object till salu för tillfället.', 'hemnet'),
+            'sold'      => __('Det finns inga sålda objekt för tillfället.', 'hemnet')
         );
 
         if (!count($hemnet_result)) {
@@ -55,7 +59,7 @@ class Hemnet extends WP_Widget {
             echo sprintf('<p class="estate address"><a href="%s" target="_blank">%s</a></p>', $estate['item-link-container'], $estate['address']);
 
             if ($instance['type'] == 'sold') {
-                echo sprintf('<p class="estate sold-date">%s %s</p>', __('Såld', 'text_domain'), $estate['sold-date']);
+                echo sprintf('<p class="estate sold-date">%s %s</p>', __('Såld', 'hemnet'), $estate['sold-date']);
             }
 
             echo sprintf('<p class="estate living-area">%s</p>', $estate['living-area']);
@@ -69,7 +73,7 @@ class Hemnet extends WP_Widget {
             }
 
             if ($instance['type'] == 'sold') {
-                echo sprintf('<p class="estate price-change">%s %s</pre>', __('Prisökning', 'text_domain'), $estate['price-change']);
+                echo sprintf('<p class="estate price-change">%s %s</pre>', __('Prisökning', 'hemnet'), $estate['price-change']);
             }
 
             echo '</div>';
@@ -102,21 +106,21 @@ class Hemnet extends WP_Widget {
         <p>
             <label for="<?php echo $this->get_field_id( 'type' ); ?>"><?php _e( 'Typ:' ); ?></label>
             <select class="widefat" id="<?php echo $this->get_field_id( 'type' ); ?>" name="<?php echo $this->get_field_name( 'type' ); ?>">
-                <option value="for-sale" <?php echo $type == 'for-sale' ? 'selected' : '' ?>><?php echo __('Till salu', 'text_domain') ?></option>
-                <option value="sold" <?php echo $type == 'sold' ? 'selected' : '' ?>><?php echo __('Sålda', 'text_domain') ?></option>
+                <option value="for-sale" <?php echo $type == 'for-sale' ? 'selected' : '' ?>><?php echo __('Till salu', 'hemnet') ?></option>
+                <option value="sold" <?php echo $type == 'sold' ? 'selected' : '' ?>><?php echo __('Sålda', 'hemnet') ?></option>
             </select>
         </p>
 
         <p>
             <label for="<?php echo $this->get_field_id( 'location_ids' ); ?>"><?php _e( 'Plats-IDn:' ); ?></label>
             <input class="widefat" id="<?php echo $this->get_field_id( 'location_ids' ); ?>" name="<?php echo $this->get_field_name( 'location_ids' ); ?>" type="text" value="<?php echo esc_attr( $location_ids ); ?>">
-            <small><?php echo __('Kommaseparerad lista av "location_ids". Sök efter önskad destination och kopiera sista numret i URLen från Hemnet', 'text_domain') ?></small>
+            <small><?php echo __('Kommaseparerad lista av "location_ids". Sök efter önskad destination och kopiera sista numret i URLen från Hemnet', 'hemnet') ?></small>
         </p>
 
         <p>
             <label for="<?php echo $this->get_field_id( 'exact_numbers' ); ?>"><?php _e( 'Exakta nummer:' ); ?></label>
             <input class="widefat" id="<?php echo $this->get_field_id( 'exact_numbers' ); ?>" name="<?php echo $this->get_field_name( 'exact_numbers' ); ?>" type="text" value="<?php echo esc_attr( $exact_numbers ); ?>">
-            <small><?php echo __('Kommaseparerad lista av specifika nummer för en adress. Använd endast tillsammans med ETT plats-id.', 'text_domain') ?></small>
+            <small><?php echo __('Kommaseparerad lista av specifika nummer för en adress. Använd endast tillsammans med ETT plats-id.', 'hemnet') ?></small>
         </p>
 
         <p>
