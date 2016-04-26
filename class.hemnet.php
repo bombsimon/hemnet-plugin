@@ -45,7 +45,7 @@ class Hemnet extends WP_Widget {
         $hemnet_result = $this->scrape_hemnet($instance);
 
         $empty_text = array(
-            'for-sale'  => __('Det finns inga object till salu för tillfället.', 'hemnet'),
+            'for-sale'  => __('Det finns inga objekt till salu för tillfället.', 'hemnet'),
             'sold'      => __('Det finns inga sålda objekt för tillfället.', 'hemnet')
         );
 
