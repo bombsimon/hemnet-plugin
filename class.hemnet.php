@@ -35,7 +35,7 @@ class Hemnet extends WP_Widget {
         );
     }
 
-    public function widget( $args, $instance ) {
+    public function widget($args, $instance) {
         echo $args['before_widget'];
 
         if (!empty($instance['title'])) {
@@ -56,24 +56,30 @@ class Hemnet extends WP_Widget {
         $i = 1;
         foreach ($hemnet_result as $estate) {
             echo '<div class="estates">';
-            echo sprintf('<p class="estate address"><a href="%s" target="_blank">%s</a></p>', $estate['item-link-container'], $estate['address']);
 
-            if ($instance['type'] == 'sold') {
-                echo sprintf('<p class="estate sold-date">%s %s</p>', __('Såld', 'hemnet'), $estate['sold-date']);
+            if ($estate['deactivated-before-open-house-day']) {
+                printf('<p class="estate address"><strong>%s</strong></p>', $estate['address']);
+                printf('<p class="estate sold"><small>%s</small></p>', __('Såld innan visning', 'hemnet'));
+            } else {
+                printf('<p class="estate address"><a href="%s" target="_blank">%s</a></p>', $estate['item-link-container'], $estate['address']);
             }
 
-            echo sprintf('<p class="estate living-area">%s</p>', $estate['living-area']);
-            echo sprintf('<p class="estate fee">%s</p>', $estate['fee']);
+            if ($instance['type'] == 'sold') {
+                printf('<p class="estate sold-date">%s %s</p>', __('Såld', 'hemnet'), $estate['sold-date']);
+            }
+
+            printf('<p class="estate living-area">%s</p>', $estate['living-area']);
+            printf('<p class="estate fee">%s</p>', $estate['fee']);
 
             if ($estate['price-per-m2']) {
-                echo sprintf('<p class="estate price">%s (%s)</p>', $estate['price'], $estate['price-per-m2']);
+                printf('<p class="estate price">%s (%s)</p>', $estate['price'], $estate['price-per-m2']);
             } else {
                 // Might include "No price" information
-                echo sprintf('<p class="estate price">%s</p>', $estate['price']);
+                printf('<p class="estate price">%s</p>', $estate['price']);
             }
 
             if ($instance['type'] == 'sold') {
-                echo sprintf('<p class="estate price-change">%s %s</pre>', __('Prisökning', 'hemnet'), $estate['price-change']);
+                printf('<p class="estate price-change">%s %s</pre>', __('Prisökning', 'hemnet'), $estate['price-change']);
             }
 
             echo '</div>';
@@ -159,6 +165,10 @@ class Hemnet extends WP_Widget {
         // Attributes to fetch from each result object based on sold or for sale search
         $attributes = $this->get_attributes_by_type($args['type']);
 
+        // Fallback for errors
+        if (!$attributes)
+            return $objects;
+
         // Add extra path for sold items in the URL
         $address_extra = $args['type'] == 'sold' ? 'salda/' : '';
 
@@ -172,37 +182,39 @@ class Hemnet extends WP_Widget {
         if (!$dom)
             return $objects;
 
-        // Fallback for errors
-        if (!$attributes)
-            return $objects;
+        // Loop over each list item with items
+        $list_class = $args['type'] == 'for-sale' ? '.results-item--show-timeline' : '.result';
 
-        // Loop over each result
-        foreach ($dom->find('.results') as $item) {
-            // Loop over the attributes we're looking for over each object
+        foreach ($dom->find($list_class) as $item) {
             foreach ($attributes as $class) {
-                $i = 0;
+                $data = $item->find('.' . $class, 0);
 
-                // Every attribute will be found for every object, push them one by one
-                foreach ($item->find('.' . $class) as $data) {
-                    // Get plaintext except for URLs
-                    // The reuslt list for sold items contain full link, the list for items for sale does not...
-                    $attrib = $class == 'item-link-container' ? sprintf('%s%s', $args['type'] == 'for-sale' ? 'http://www.hemnet.se' : '', $data->href) : $data->plaintext;
+                // Get plaintext except for URLs
+                $value = $data->plaintext;
 
-                    // Some text cleanup...
-                    $attrib = preg_replace('/&nbsp;/', '', $attrib);
-                    $attrib = preg_replace('/^\s+|\s+$/', '', $attrib);
-                    $attrib = preg_replace('/\s{2,}/', ' ', $attrib);
+                // Get href if we're looking for URL
+                // The reuslt list for sold items contain full link, the list for items for sale does not...
+                if ($class == 'item-link-container')
+                    $value = sprintf('%s%s', $args['type'] == 'for-sale' ? 'http://www.hemnet.se' : '', $data->href);
 
-                    // And remove hard coded prefixes
-                    $attrib = preg_replace('/Begärt pris: /', '', $attrib);
-                    $attrib = preg_replace('/Såld /', '', $attrib);
-                    $attrib = preg_replace('/Slutpris /', '', $attrib);
+                // Get data-src if we're looking for image
+                if ($class == 'property-image')
+                    $value = $data->{'data-src'};
 
-                    $objects[$i][$class] = $attrib;
+                // Some text cleanup...
+                $value = preg_replace('/&nbsp;/', '', $value);
+                $value = preg_replace('/^\s+|\s+$/', '', $value);
+                $value = preg_replace('/\s{2,}/', ' ', $value);
 
-                    $i++;
-                }
+                // And remove hard coded prefixes
+                $value = preg_replace('/Begärt pris: /', '', $value);
+                $value = preg_replace('/Såld /', '', $value);
+                $value = preg_replace('/Slutpris /', '', $value);
+
+                $objects[$i][$class] = $value;
             }
+
+            $i++;
         }
 
         // Return all (max 50) matches if no number filter is set
@@ -231,14 +243,14 @@ class Hemnet extends WP_Widget {
                 'age', 'price', 'fee',
                 'area', 'city', 'address',
                 'living-area', 'price-per-m2',
-                'item-link-container'
+                'item-link-container', 'property-image',
+                'deactivated-before-open-house-day'
             ],
             'sold' => [
                 'sold-date', 'price', 'price-per-m2',
                 'fee', 'asked-price', 'price-change',
                 'address', 'area', 'living-area',
                 'item-link-container'
-
             ]
         );
 
