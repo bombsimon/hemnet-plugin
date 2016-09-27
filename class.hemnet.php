@@ -126,7 +126,7 @@ class Hemnet extends WP_Widget {
         </p>
 
         <p>
-            <label for="<?php echo $this->get_field_id( 'location_ids' ); ?>"><?php _e( 'Locationi ID\'s:', 'hemnet' ); ?></label>
+            <label for="<?php echo $this->get_field_id( 'location_ids' ); ?>"><?php _e( 'Location ID\'s:', 'hemnet' ); ?></label>
             <input class="widefat" id="<?php echo $this->get_field_id( 'location_ids' ); ?>" name="<?php echo $this->get_field_name( 'location_ids' ); ?>" type="text" value="<?php echo esc_attr( $current_values['location_ids'] ); ?>">
             <small><?php echo __( 'Comma separated list of "location_ids". Search your desired location and copy the last number from the URL from Hemnet.', 'hemnet' ) ?></small>
         </p>
