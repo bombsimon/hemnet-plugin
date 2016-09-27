@@ -1,0 +1,90 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Hemnet\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-09-27 20:39+0000\n"
+"PO-Revision-Date: 2016-09-27 21:21+0000\n"
+"Last-Translator: \n"
+"Language-Team: Swedish\n"
+"Language: sv-SE\n"
+"Plural-Forms: nplurals=2; plural=n!=1\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Loco-Source-Locale: sv_SE\n"
+"X-Generator: Loco - https://localise.biz/\n"
+"X-Loco-Parser: loco_parse_po"
+
+msgid "Hemnet"
+msgstr "Hemnet"
+
+msgid "Scrape real estates from Hemnet"
+msgstr "Hämta fastigheter från hemnet"
+
+msgid "There are no objects for sale at the moment."
+msgstr "Det finns inga objekt till salu för tillfället."
+
+msgid "There are no sold objects at the moment."
+msgstr "Det finns inga sålda objekt för tillfället."
+
+msgid "Sold before preview"
+msgstr "Såld innan visning"
+
+#: ../class.hemnet.php:75
+msgid "Sold"
+msgstr "Såld"
+
+msgid "kr/m²"
+msgstr "kr/m²"
+
+msgid "Price increase"
+msgstr "Prisökning"
+
+#: ../class.hemnet.php:123
+msgid "For sale"
+msgstr "Till salu"
+
+#: ../class.hemnet.php:124
+msgid "Sold"
+msgstr "Sålda"
+
+msgid "Title:"
+msgstr "Titel:"
+
+msgid "Type:"
+msgstr "Typ:"
+
+msgid "Location ID's:"
+msgstr "Plats-IDn:"
+
+msgid ""
+"Comma separated list of \"location_ids\". Search your desired location and "
+"copy the last number from the URL from Hemnet."
+msgstr ""
+"Kommaseparerad lista av \"location_ids\". Sök efter önskad destination och "
+"kopiera sista numret i URLen från Hemnet."
+
+msgid "Exact numbers:"
+msgstr "Exakta nummer:"
+
+msgid ""
+"Comma separated list of specific numbers for a given address. Only use this "
+"with ONE location ID."
+msgstr ""
+"Kommaseparerad lista av specifika nummer för en adress. Använd endast "
+"tillsammans med ETT plats-id."
+
+msgid "Max results:"
+msgstr "Max resultat:"
+
+msgid "Formatting"
+msgstr "Formatering"
+
+msgid "Display date after address (only for sold)"
+msgstr "Visa datum efter adress (endast sålda)"
+
+msgid "Display price increase (only for sold)"
+msgstr "Visa prisökning (endast sålda)"
+
+msgid "Display price per m2"
+msgstr "Visa pris per m2"
