@@ -24,13 +24,15 @@ add_action('widgets_init', function() {
     register_widget('Hemnet');
 });
 
+load_plugin_textdomain('hemnet', FALSE, dirname(plugin_basename(__FILE__)) . '/languages/');
+
 class Hemnet extends WP_Widget {
     function __construct() {
         parent::__construct(
             'Hemnet',
-            __('Hemnet', 'hemnet'),
+            __( 'Hemnet', 'hemnet' ),
             array(
-                'description' => __('Scrape real estates from Hemnet', 'hemnet')
+                'description' => __( 'Scrape real estates from Hemnet', 'hemnet' )
             )
         );
     }
@@ -39,14 +41,14 @@ class Hemnet extends WP_Widget {
         echo $args['before_widget'];
 
         if (!empty($instance['title'])) {
-            echo $args['before_title'] . apply_filters( 'widget_title', $instance['title'] ). $args['after_title'];
+            echo $args['before_title'] . apply_filters('widget_title', $instance['title']). $args['after_title'];
         }
 
         $hemnet_result = $this->scrape_hemnet($instance);
 
         $empty_text = array(
-            'for-sale'  => __('Det finns inga objekt till salu för tillfället.', 'hemnet'),
-            'sold'      => __('Det finns inga sålda objekt för tillfället.', 'hemnet')
+            'for-sale'  => __( 'There are no objects for sale at the moment.', 'hemnet' ),
+            'sold'      => __( 'There are no sold objects at the moment.', 'hemnet' )
         );
 
         if (!count($hemnet_result)) {
@@ -57,29 +59,36 @@ class Hemnet extends WP_Widget {
         foreach ($hemnet_result as $estate) {
             echo '<div class="estates">';
 
-            if ($estate['deactivated-before-open-house-day']) {
-                printf('<p class="estate address"><strong>%s</strong></p>', $estate['address']);
-                printf('<p class="estate sold"><small>%s</small></p>', __('Såld innan visning', 'hemnet'));
-            } else {
-                printf('<p class="estate address"><a href="%s" target="_blank">%s</a></p>', $estate['item-link-container'], $estate['address']);
+            $show_date_after = '';
+            if ( $instance['date_after_address'] && $instance['type'] == 'sold' ) {
+                $show_date_after = sprintf(' <small>(%s)</small>', $estate['sold-date']);
             }
 
-            if ($instance['type'] == 'sold') {
-                printf('<p class="estate sold-date">%s %s</p>', __('Såld', 'hemnet'), $estate['sold-date']);
+            if ($estate['deactivated-before-open-house-day']) {
+                printf('<p class="estate address"><strong>%s%s</strong></p>', $estate['address'], $show_date_after);
+                printf('<p class="estate sold"><small>%s</small></p>', __( 'Sold before preview', 'hemnet' ));
+            } else {
+                printf('<p class="estate address"><a href="%s" target="_blank">%s</a>%s</p>', $estate['item-link-container'], $estate['address'], $show_date_after);
+            }
+
+            if ($instance['type'] == 'sold' && ! $instance['date_after_address']) {
+                printf( '<p class="estate sold-date">%s %s</p>', __( 'Sold', 'hemnet' ), $estate['sold-date'] );
             }
 
             printf('<p class="estate living-area">%s</p>', $estate['living-area']);
             printf('<p class="estate fee">%s</p>', $estate['fee']);
 
-            if ($estate['price-per-m2']) {
-                printf('<p class="estate price">%s (%s)</p>', $estate['price'], $estate['price-per-m2']);
+            if ($estate['price-per-m2'] && $instance['show_ppm2'] ) {
+                printf('<p class="estate price">%s (%s %s)</p>', $estate['price'], $estate['price-per-m2'], __( 'kr/m²', 'hemnet' ));
             } else {
                 // Might include "No price" information
                 printf('<p class="estate price">%s</p>', $estate['price']);
             }
 
             if ($instance['type'] == 'sold') {
-                printf('<p class="estate price-change">%s %s</pre>', __('Prisökning', 'hemnet'), $estate['price-change']);
+                if ( $instance['show_increase'] ) {
+                    printf('<p class="estate price-change">%s %s</pre>', __( 'Price increase', 'hemnet' ), $estate['price-change']);
+                }
             }
 
             echo '</div>';
@@ -96,42 +105,63 @@ class Hemnet extends WP_Widget {
     }
 
     public function form ($instance) {
-        $title          = isset($instance['title'])         ? $instance['title']            : 'Hemnet';
-        $type           = isset($instance['type'])          ? $instance['type']             : 'for-sale';
-        $location_ids   = isset($instance['location_ids'])  ? $instance['location_ids']     : '882639';
-        $exact_numbers  = isset($instance['exact_numbers']) ? $instance['exact_numbers']    : '';
-        $max_results    = isset($instance['max_results'])   ? $instance['max_results']      : '';
+        $current_values = array();
 
+        foreach ($this->available_settings() as $setting => $default_value) {
+            $current_values[$setting] = $this->defined_or_fallback( $instance[$setting], $default_value );
+        }
 ?>
 
         <p>
-            <label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e( 'Titel:' ); ?></label>
-            <input class="widefat" id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" type="text" value="<?php echo esc_attr( $title ); ?>">
+            <label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e( 'Title:', 'hemnet' ); ?></label>
+            <input class="widefat" id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" type="text" value="<?php echo esc_attr( $current_values['title'] ); ?>">
         </p>
 
         <p>
-            <label for="<?php echo $this->get_field_id( 'type' ); ?>"><?php _e( 'Typ:' ); ?></label>
+            <label for="<?php echo $this->get_field_id( 'type' ); ?>"><?php _e( 'Type:', 'hemnet' ); ?></label>
             <select class="widefat" id="<?php echo $this->get_field_id( 'type' ); ?>" name="<?php echo $this->get_field_name( 'type' ); ?>">
-                <option value="for-sale" <?php echo $type == 'for-sale' ? 'selected' : '' ?>><?php echo __('Till salu', 'hemnet') ?></option>
-                <option value="sold" <?php echo $type == 'sold' ? 'selected' : '' ?>><?php echo __('Sålda', 'hemnet') ?></option>
+                <option value="for-sale" <?php echo $current_values['type'] == 'for-sale' ? 'selected' : '' ?>><?php echo __( 'For sale', 'hemnet' ) ?></option>
+                <option value="sold" <?php echo $current_values['type'] == 'sold' ? 'selected' : '' ?>><?php echo __( 'Sold', 'hemnet' ) ?></option>
             </select>
         </p>
 
         <p>
-            <label for="<?php echo $this->get_field_id( 'location_ids' ); ?>"><?php _e( 'Plats-IDn:' ); ?></label>
-            <input class="widefat" id="<?php echo $this->get_field_id( 'location_ids' ); ?>" name="<?php echo $this->get_field_name( 'location_ids' ); ?>" type="text" value="<?php echo esc_attr( $location_ids ); ?>">
-            <small><?php echo __('Kommaseparerad lista av "location_ids". Sök efter önskad destination och kopiera sista numret i URLen från Hemnet', 'hemnet') ?></small>
+            <label for="<?php echo $this->get_field_id( 'location_ids' ); ?>"><?php _e( 'Plats-IDn:', 'hemnet' ); ?></label>
+            <input class="widefat" id="<?php echo $this->get_field_id( 'location_ids' ); ?>" name="<?php echo $this->get_field_name( 'location_ids' ); ?>" type="text" value="<?php echo esc_attr( $current_values['location_ids'] ); ?>">
+            <small><?php echo __( 'Comma separated list of "location_ids". Search your desired location and copy the last number from the URL from Hemnet.', 'hemnet' ) ?></small>
         </p>
 
         <p>
-            <label for="<?php echo $this->get_field_id( 'exact_numbers' ); ?>"><?php _e( 'Exakta nummer:' ); ?></label>
-            <input class="widefat" id="<?php echo $this->get_field_id( 'exact_numbers' ); ?>" name="<?php echo $this->get_field_name( 'exact_numbers' ); ?>" type="text" value="<?php echo esc_attr( $exact_numbers ); ?>">
-            <small><?php echo __('Kommaseparerad lista av specifika nummer för en adress. Använd endast tillsammans med ETT plats-id.', 'hemnet') ?></small>
+            <label for="<?php echo $this->get_field_id( 'exact_numbers' ); ?>"><?php _e( 'Exact numbers:', 'hemnet' ); ?></label>
+            <input class="widefat" id="<?php echo $this->get_field_id( 'exact_numbers' ); ?>" name="<?php echo $this->get_field_name( 'exact_numbers' ); ?>" type="text" value="<?php echo esc_attr( $current_values['exact_numbers'] ); ?>">
+            <small><?php echo __( 'Comma separated list of specific numbers for a given address. Only use this with ONE location ID.', 'hemnet' ) ?></small>
         </p>
 
         <p>
-            <label for="<?php echo $this->get_field_id( 'max_results' ); ?>"><?php _e( 'Max resultat:' ); ?></label>
-            <input class="widefat" id="<?php echo $this->get_field_id( 'max_results' ); ?>" name="<?php echo $this->get_field_name( 'max_results' ); ?>" type="text" value="<?php echo esc_attr( $max_results ); ?>">
+            <label for="<?php echo $this->get_field_id( 'max_results' ); ?>"><?php _e( 'Max results:', 'hemnet' ); ?></label>
+            <input class="widefat" id="<?php echo $this->get_field_id( 'max_results' ); ?>" name="<?php echo $this->get_field_name( 'max_results' ); ?>" type="text" value="<?php echo esc_attr( $current_values['max_results'] ); ?>">
+        </p>
+
+        <p>
+            <strong><?php _e( 'Formatting', 'hemnet' ) ?></strong>
+        </p>
+
+        <p>
+            <?php $increase_checked = $current_values['show_increase'] ? 'checked' : ''; ?>
+            <input id="<?php echo $this->get_field_id( 'show_increase'); ?>" name="<?php echo $this->get_field_name( 'show_increase' ); ?>" type="checkbox" value="1" <?php echo $increase_checked ?>>
+            <label for="<?php echo $this->get_field_id( 'show_increase' ); ?>"><?php _e( 'Display price increase (only for sold)', 'hemnet' ) ?></label>
+        </p>
+
+        <p>
+            <?php $date_after_checked = $current_values['date_after_address'] ? 'checked' : ''; ?>
+            <input id="<?php echo $this->get_field_id( 'date_after_address'); ?>" name="<?php echo $this->get_field_name( 'date_after_address' ); ?>" type="checkbox" value="1" <?php echo $date_after_checked ?>>
+            <label for="<?php echo $this->get_field_id( 'date_after_address' ); ?>"><?php _e( 'Display date after address (only for sold)', 'hemnet' ) ?></label>
+        </p>
+
+        <p>
+            <?php $ppm2_checked = $current_values['show_ppm2'] ? 'checked' : ''; ?>
+            <input id="<?php echo $this->get_field_id( 'show_ppm2'); ?>" name="<?php echo $this->get_field_name( 'show_ppm2' ); ?>" type="checkbox" value="1" <?php echo $ppm2_checked ?>>
+            <label for="<?php echo $this->get_field_id( 'show_ppm2' ); ?>"><?php _e( 'Display price per m2', 'hemnet' ) ?></label>
         </p>
 
 <?php
@@ -141,13 +171,30 @@ class Hemnet extends WP_Widget {
     public function update($new_instance, $old_instance) {
         $instance = array();
 
-        $instance['title']          = (!empty($new_instance['title']))          ? strip_tags($new_instance['title'])            : '';
-        $instance['type']           = (!empty($new_instance['type']))           ? strip_tags($new_instance['type'])             : '';
-        $instance['location_ids']   = (!empty($new_instance['location_ids']))   ? strip_tags($new_instance['location_ids'])     : '';
-        $instance['exact_numbers']  = (!empty($new_instance['exact_numbers']))  ? strip_tags($new_instance['exact_numbers'])    : '';
-        $instance['max_results']    = (!empty($new_instance['max_results']))    ? strip_tags($new_instance['max_results'])      : '';
+        foreach ($this->available_settings() as $setting => $default_value) {
+            $instance[$setting] = (!empty($new_instance[$setting])) ? strip_tags($new_instance[$setting]) : '';
+        }
 
         return $instance;
+    }
+
+    private function defined_or_fallback ( $defined, $fallback = '') {
+        return isset($defined) ? $defined : $fallback;
+    }
+
+    private function available_settings () {
+        $settings = [
+            'title'              => 'Hemnet',
+            'type'               => 'for-sale',
+            'location_ids'       => '882639',
+            'exact_numbers'      => '',
+            'max_results'        => '10',
+            'show_increase'      => '1',
+            'date_after_address' => '',
+            'show_ppm2'          => '1',
+        ];
+
+        return $settings;
     }
 
     private function scrape_hemnet ($args) {
@@ -206,10 +253,11 @@ class Hemnet extends WP_Widget {
                 $value = preg_replace('/^\s+|\s+$/', '', $value);
                 $value = preg_replace('/\s{2,}/', ' ', $value);
 
-                // And remove hard coded prefixes
+                // And remove hard coded pre- and postfixes
                 $value = preg_replace('/Begärt pris: /', '', $value);
                 $value = preg_replace('/Såld /', '', $value);
                 $value = preg_replace('/Slutpris /', '', $value);
+                $value = preg_replace('/ kr\/m²/', '', $value);
 
                 $objects[$i][$class] = $value;
             }
