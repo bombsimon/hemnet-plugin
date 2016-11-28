@@ -229,10 +229,7 @@ class Hemnet extends WP_Widget {
         if (!$dom)
             return $objects;
 
-        // Loop over each list item with items
-        $list_class = $args['type'] == 'for-sale' ? '.results-item--show-timeline' : '.result';
-
-        foreach ($dom->find($list_class) as $item) {
+        foreach ($dom->find('.result .normal') as $item) {
             foreach ($attributes as $class) {
                 $data = $item->find('.' . $class, 0);
 
@@ -258,6 +255,9 @@ class Hemnet extends WP_Widget {
                 $value = preg_replace('/Såld /', '', $value);
                 $value = preg_replace('/Slutpris /', '', $value);
                 $value = preg_replace('/ kr\/m²/', '', $value);
+
+                // Cleanup class names
+                $class = preg_replace('/ribbon--/', '', $class);
 
                 $objects[$i][$class] = $value;
             }
@@ -292,7 +292,7 @@ class Hemnet extends WP_Widget {
                 'area', 'city', 'address',
                 'living-area', 'price-per-m2',
                 'item-link-container', 'property-image',
-                'deactivated-before-open-house-day'
+                'ribbon--deactivated-before-open-house-day'
             ],
             'sold' => [
                 'sold-date', 'price', 'price-per-m2',
