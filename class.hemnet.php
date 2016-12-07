@@ -15,16 +15,16 @@ Text Domain:    hemnet
 include_once '_inc/simple_html_dom.php';
 
 // Block direct requests
-if (!defined('ABSPATH'))
-    die('-1');
+if ( ! defined( 'ABSPATH' ) )
+    die( '-1' );
 
 
-add_action('widgets_init', function() {
-    wp_enqueue_style('hemnet', plugins_url('_inc/style.css', __FILE__));
-    register_widget('Hemnet');
+add_action( 'widgets_init', function() {
+    wp_enqueue_style( 'hemnet', plugins_url( '_inc/style.css', __FILE__ ) );
+    register_widget( 'Hemnet' );
 });
 
-load_plugin_textdomain('hemnet', FALSE, dirname(plugin_basename(__FILE__)) . '/languages/');
+load_plugin_textdomain( 'hemnet', FALSE, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 
 class Hemnet extends WP_Widget {
     function __construct() {
@@ -37,64 +37,64 @@ class Hemnet extends WP_Widget {
         );
     }
 
-    public function widget($args, $instance) {
+    public function widget( $args, $instance ) {
         echo $args['before_widget'];
 
-        if (!empty($instance['title'])) {
-            echo $args['before_title'] . apply_filters('widget_title', $instance['title']). $args['after_title'];
+        if ( ! empty( $instance['title'] ) ) {
+            echo $args['before_title'] . apply_filters( 'widget_title', $instance['title'] ) . $args['after_title'];
         }
 
-        $hemnet_result = $this->scrape_hemnet($instance);
+        $hemnet_result = $this->scrape_hemnet( $instance );
 
-        $empty_text = array(
+        $empty_text = [
             'for-sale'  => __( 'There are no objects for sale at the moment.', 'hemnet' ),
             'sold'      => __( 'There are no sold objects at the moment.', 'hemnet' )
-        );
+        ];
 
-        if (!count($hemnet_result)) {
+        if ( ! count( $hemnet_result ) ) {
             echo '<div class="estate">' . $empty_text[$instance['type']] . '</div>';
         }
 
         $i = 1;
-        foreach ($hemnet_result as $estate) {
+        foreach ( $hemnet_result as $estate ) {
             echo '<div class="estates">';
 
             $show_date_after = '';
             if ( $instance['date_after_address'] && $instance['type'] == 'sold' ) {
-                $show_date_after = sprintf(' <small>(%s)</small>', $estate['sold-date']);
+                $show_date_after = sprintf(' <small>(%s)</small>', $estate['sold-date'] );
             }
 
-            if ($estate['sold-before-preview']) {
-                printf('<p class="estate address"><strong>%s%s</strong></p>', $estate['address'], $show_date_after);
-                printf('<p class="estate sold"><small>%s</small></p>', __( 'Sold before preview', 'hemnet' ));
+            if ( $estate['sold-before-preview'] ) {
+                printf( '<p class="estate address"><strong>%s%s</strong></p>', $estate['address'], $show_date_after );
+                printf( '<p class="estate sold"><small>%s</small></p>', __( 'Sold before preview', 'hemnet' ) );
             } else {
-                printf('<p class="estate address"><a href="%s" target="_blank">%s</a>%s</p>', $estate['url'], $estate['address'], $show_date_after);
+                printf( '<p class="estate address"><a href="%s" target="_blank">%s</a>%s</p>', $estate['url'], $estate['address'], $show_date_after );
             }
 
-            if ($instance['type'] == 'sold' && ! $instance['date_after_address']) {
+            if ( $instance['type'] == 'sold' && ! $instance['date_after_address'] ) {
                 printf( '<p class="estate sold-date">%s %s</p>', _x( 'Sold', 'Displayed before date', 'hemnet' ), $estate['sold-date'] );
             }
 
-            printf('<p class="estate living-area">%s</p>', $estate['size']);
-            printf('<p class="estate fee">%s</p>', $estate['fee']);
+            printf( '<p class="estate living-area">%s</p>', $estate['size'] );
+            printf( '<p class="estate fee">%s</p>', $estate['fee'] );
 
-            if ($estate['price-per-m2'] && $instance['show_ppm2'] ) {
-                printf('<p class="estate price">%s (%s %s)</p>', $estate['price'], $estate['price-per-m2'], __( 'kr/m²', 'hemnet' ));
+            if ( $estate['price-per-m2'] && $instance['show_ppm2'] ) {
+                printf( '<p class="estate price">%s (%s %s)</p>', $estate['price'], $estate['price-per-m2'], __( 'kr/m²', 'hemnet' ) );
             } else {
                 // Might include "No price" information
-                printf('<p class="estate price">%s</p>', $estate['price']);
+                printf( '<p class="estate price">%s</p>', $estate['price'] );
             }
 
-            if ($instance['type'] == 'sold') {
+            if ( $instance['type'] == 'sold' ) {
                 if ( $instance['show_increase'] ) {
-                    printf('<p class="estate price-change">%s %s</pre>', __( 'Price change', 'hemnet' ), $estate['price-change']);
+                    printf( '<p class="estate price-change">%s %s</pre>', __( 'Price change', 'hemnet' ), $estate['price-change'] );
                 }
             }
 
             echo '</div>';
 
-            if ($instance['max_results']) {
-                if ($i == $instance['max_results'])
+            if ( $instance['max_results'] ) {
+                if ( $i == $instance['max_results'] )
                     break;
             }
 
@@ -104,10 +104,10 @@ class Hemnet extends WP_Widget {
         echo $args['after_widget'];
     }
 
-    public function form ($instance) {
-        $current_values = array();
+    public function form ( $instance ) {
+        $current_values = [];
 
-        foreach ($this->available_settings() as $setting => $default_value) {
+        foreach ( $this->available_settings() as $setting => $default_value ) {
             $current_values[$setting] = $this->defined_or_fallback( $instance[$setting], $default_value );
         }
 ?>
@@ -168,18 +168,18 @@ class Hemnet extends WP_Widget {
 
     }
 
-    public function update($new_instance, $old_instance) {
-        $instance = array();
+    public function update( $new_instance, $old_instance ) {
+        $instance = [];
 
-        foreach ($this->available_settings() as $setting => $default_value) {
-            $instance[$setting] = (!empty($new_instance[$setting])) ? strip_tags($new_instance[$setting]) : '';
+        foreach ( $this->available_settings() as $setting => $default_value ) {
+            $instance[$setting] = ( ! empty( $new_instance[$setting] ) ) ? strip_tags( $new_instance[$setting] ) : '';
         }
 
         return $instance;
     }
 
     private function defined_or_fallback ( $defined, $fallback = '') {
-        return isset($defined) ? $defined : $fallback;
+        return isset( $defined ) ? $defined : $fallback;
     }
 
     private function available_settings () {
@@ -197,14 +197,14 @@ class Hemnet extends WP_Widget {
         return $settings;
     }
 
-    private function scrape_hemnet ($args) {
+    private function scrape_hemnet ( $args ) {
         // Location IDs @ hemnet.se - Search for your location and copy the last number/ID in the URL
         // Rembemer to be as specific as possible, this will only show the first 50 results (first result page on hemnet.se)
-        $location_ids = split(',', $args['location_ids']);
+        $location_ids = split( ',', $args['location_ids'] );
 
         // Exact match, only match these numbers from the results (hemnet.se does not support specific numbers so we just filter everything else out)
         // This should not be used when using multiple location IDs since we don't know which of the addresses the number should be fixed for
-        $exact_numbers = $args['exact_numbers'] ? split(',', $args['exact_numbers']) : [];
+        $exact_numbers = $args['exact_numbers'] ? split( ',', $args['exact_numbers'] ) : [];
 
         // Object result placeholder
         $objects = [];
@@ -213,51 +213,51 @@ class Hemnet extends WP_Widget {
         $attributes = $this->get_attributes();
 
         // Fallback for errors
-        if (!$attributes)
+        if ( ! $attributes )
             return $objects;
 
         // Set scrape type
         $type = $args['type'];
 
         // The Hemnet address
-        $hemnet_address = sprintf('http://www.hemnet.se/%sbostader?%s', $attributes['address-extra'][$type], join('&', array_map(function($id) { return sprintf('location_ids[]=%d', $id); }, $location_ids)));
+        $hemnet_address = sprintf( 'http://www.hemnet.se/%sbostader?%s', $attributes['address-extra'][$type], join( '&', array_map( function( $id ) { return sprintf( 'location_ids[]=%d', $id ); }, $location_ids ) ) );
 
         // Get DOM from Hemnet - supress warnings because reasons...
-        $dom = @file_get_html($hemnet_address);
+        $dom = @file_get_html( $hemnet_address );
 
         // Return empty object list if request fails
-        if (!$dom)
+        if ( ! $dom )
             return $objects;
 
-        foreach ($dom->find( $attributes['dom-classes'][$type] ) as $item) {
-            foreach ($attributes['data-classes'] as $key => $value) {
-                $data = $item->find($value[$type], 0);
+        foreach ( $dom->find( $attributes['dom-classes'][$type] ) as $item ) {
+            foreach ( $attributes['data-classes'] as $key => $value ) {
+                $data = $item->find( $value[$type], 0 );
 
                 // Get plaintext except for URLs
                 $value = $data->plaintext;
 
                 // Get href if we're looking for URL
                 // The reuslt list for sold items contain full link, the list for items for sale does not...
-                if ($key == 'url')
-                    $value = sprintf('%s%s', $args['type'] == 'for-sale' ? 'http://www.hemnet.se' : '', $data->href);
+                if ( $key == 'url' )
+                    $value = sprintf( '%s%s', $args['type'] == 'for-sale' ? 'http://www.hemnet.se' : '', $data->href );
 
                 // Get data-src if we're looking for image
-                if ($key == 'image')
+                if ( $key == 'image' )
                     $value = $data->{'data-src'};
 
                 // Some text cleanup...
-                $value = preg_replace('/&nbsp;/', '', $value);
-                $value = preg_replace('/^\s+|\s+$/', '', $value);
-                $value = preg_replace('/\s{2,}/', ' ', $value);
+                $value = preg_replace( '/&nbsp;/', '', $value );
+                $value = preg_replace( '/^\s+|\s+$/', '', $value );
+                $value = preg_replace( '/\s{2,}/', ' ', $value );
 
                 // And remove hard coded pre- and postfixes
-                $value = preg_replace('/Begärt pris: /', '', $value);
-                $value = preg_replace('/Såld /', '', $value);
-                $value = preg_replace('/Slutpris /', '', $value);
-                $value = preg_replace('/ kr\/m²/', '', $value);
+                $value = preg_replace( '/Begärt pris: /', '', $value );
+                $value = preg_replace( '/Såld /', '', $value );
+                $value = preg_replace( '/Slutpris /', '', $value );
+                $value = preg_replace( '/ kr\/m²/', '', $value );
 
-                if ($key == 'sold-date') {
-                    $value = $this->format_date($value);
+                if ( $key == 'sold-date' ) {
+                    $value = $this->format_date( $value );
                 }
 
                 $objects[$i][$key] = $value;
@@ -267,17 +267,17 @@ class Hemnet extends WP_Widget {
         }
 
         // Return all (max 50) matches if no number filter is set
-        if (!count($exact_numbers))
+        if ( ! count( $exact_numbers ) )
             return $objects;
 
         // Fiter exact matches for specific numbers, still from the max 50 results
         $final = [];
-        foreach ($objects as $obj) {
-            foreach ($exact_numbers as $exact) {
+        foreach ( $objects as $obj ) {
+            foreach ( $exact_numbers as $exact ) {
                 // Sadly there are no standard for addresses so this should match what's the street number in the string
-                preg_match('/^(\D+) (\d+)\w?(,|$)/', $obj['address'], $address);
+                preg_match( '/^(\D+) (\d+)\w?(,|$)/', $obj['address'], $address );
 
-                if ($address[2] == $exact) {
+                if ( $address[2] == $exact ) {
                     $final[] = $obj;
                 }
             }
@@ -286,7 +286,7 @@ class Hemnet extends WP_Widget {
         return $final;
     }
 
-    private function format_date($date = '00 januari 1990') {
+    private function format_date( $date = '00 januari 1990' ) {
         $m = [
             'januari'   => 1,
             'februari'  => 2,
@@ -302,8 +302,8 @@ class Hemnet extends WP_Widget {
             'december'  => 12,
         ];
 
-        preg_match('/^(\d+) (\w+) (\d+)$/', $date, $dp);
-        $formatted_date = sprintf('%d-%02d-%02d', $dp[3], $m[$dp[2]], $dp[1]);
+        preg_match( '/^(\d+) (\w+) (\d+)$/', $date, $dp );
+        $formatted_date = sprintf( '%d-%02d-%02d', $dp[3], $m[$dp[2]], $dp[1] );
 
         return $formatted_date;
     }
