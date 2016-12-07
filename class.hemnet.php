@@ -64,18 +64,18 @@ class Hemnet extends WP_Widget {
                 $show_date_after = sprintf(' <small>(%s)</small>', $estate['sold-date']);
             }
 
-            if ($estate['deactivated-before-open-house-day']) {
+            if ($estate['sold-before-preview']) {
                 printf('<p class="estate address"><strong>%s%s</strong></p>', $estate['address'], $show_date_after);
                 printf('<p class="estate sold"><small>%s</small></p>', __( 'Sold before preview', 'hemnet' ));
             } else {
-                printf('<p class="estate address"><a href="%s" target="_blank">%s</a>%s</p>', $estate['item-link-container'], $estate['address'], $show_date_after);
+                printf('<p class="estate address"><a href="%s" target="_blank">%s</a>%s</p>', $estate['url'], $estate['address'], $show_date_after);
             }
 
             if ($instance['type'] == 'sold' && ! $instance['date_after_address']) {
                 printf( '<p class="estate sold-date">%s %s</p>', __( 'Sold', 'hemnet' ), $estate['sold-date'] );
             }
 
-            printf('<p class="estate living-area">%s</p>', $estate['living-area']);
+            printf('<p class="estate living-area">%s</p>', $estate['size']);
             printf('<p class="estate fee">%s</p>', $estate['fee']);
 
             if ($estate['price-per-m2'] && $instance['show_ppm2'] ) {
@@ -87,7 +87,7 @@ class Hemnet extends WP_Widget {
 
             if ($instance['type'] == 'sold') {
                 if ( $instance['show_increase'] ) {
-                    printf('<p class="estate price-change">%s %s</pre>', __( 'Price increase', 'hemnet' ), $estate['price-change']);
+                    printf('<p class="estate price-change">%s %s</pre>', __( 'Price change', 'hemnet' ), $estate['price-change']);
                 }
             }
 
@@ -149,7 +149,7 @@ class Hemnet extends WP_Widget {
         <p>
             <?php $increase_checked = $current_values['show_increase'] ? 'checked' : ''; ?>
             <input id="<?php echo $this->get_field_id( 'show_increase'); ?>" name="<?php echo $this->get_field_name( 'show_increase' ); ?>" type="checkbox" value="1" <?php echo $increase_checked ?>>
-            <label for="<?php echo $this->get_field_id( 'show_increase' ); ?>"><?php _e( 'Display price increase (only for sold)', 'hemnet' ) ?></label>
+            <label for="<?php echo $this->get_field_id( 'show_increase' ); ?>"><?php _e( 'Display price change (only for sold)', 'hemnet' ) ?></label>
         </p>
 
         <p>
@@ -209,18 +209,18 @@ class Hemnet extends WP_Widget {
         // Object result placeholder
         $objects = [];
 
-        // Attributes to fetch from each result object based on sold or for sale search
-        $attributes = $this->get_attributes_by_type($args['type']);
+        // Attributes to fetch from each result object
+        $attributes = $this->get_attributes();
 
         // Fallback for errors
         if (!$attributes)
             return $objects;
 
-        // Add extra path for sold items in the URL
-        $address_extra = $args['type'] == 'sold' ? 'salda/' : '';
+        // Set scrape type
+        $type = $args['type'];
 
         // The Hemnet address
-        $hemnet_address = sprintf('http://www.hemnet.se/%sbostader?%s', $address_extra, join('&', array_map(function($id) { return sprintf('location_ids[]=%d', $id); }, $location_ids)));
+        $hemnet_address = sprintf('http://www.hemnet.se/%sbostader?%s', $attributes['address-extra'][$type], join('&', array_map(function($id) { return sprintf('location_ids[]=%d', $id); }, $location_ids)));
 
         // Get DOM from Hemnet - supress warnings because reasons...
         $dom = @file_get_html($hemnet_address);
@@ -229,20 +229,20 @@ class Hemnet extends WP_Widget {
         if (!$dom)
             return $objects;
 
-        foreach ($dom->find('.result .normal') as $item) {
-            foreach ($attributes as $class) {
-                $data = $item->find('.' . $class, 0);
+        foreach ($dom->find( $attributes['dom-classes'][$type] ) as $item) {
+            foreach ($attributes['data-classes'] as $key => $value) {
+                $data = $item->find($value[$type], 0);
 
                 // Get plaintext except for URLs
                 $value = $data->plaintext;
 
                 // Get href if we're looking for URL
                 // The reuslt list for sold items contain full link, the list for items for sale does not...
-                if ($class == 'item-link-container')
+                if ($key == 'url')
                     $value = sprintf('%s%s', $args['type'] == 'for-sale' ? 'http://www.hemnet.se' : '', $data->href);
 
                 // Get data-src if we're looking for image
-                if ($class == 'property-image')
+                if ($key == 'image')
                     $value = $data->{'data-src'};
 
                 // Some text cleanup...
@@ -256,10 +256,11 @@ class Hemnet extends WP_Widget {
                 $value = preg_replace('/Slutpris /', '', $value);
                 $value = preg_replace('/ kr\/m²/', '', $value);
 
-                // Cleanup class names
-                $class = preg_replace('/ribbon--/', '', $class);
+                if ($key == 'sold-date') {
+                    $value = $this->format_date($value);
+                }
 
-                $objects[$i][$class] = $value;
+                $objects[$i][$key] = $value;
             }
 
             $i++;
@@ -285,23 +286,86 @@ class Hemnet extends WP_Widget {
         return $final;
     }
 
-    private function get_attributes_by_type ($type = 'for-sale') {
-        $type_map = array(
-            'for-sale' => [
-                'age', 'price', 'fee',
-                'area', 'city', 'address',
-                'living-area', 'price-per-m2',
-                'item-link-container', 'property-image',
-                'ribbon--deactivated-before-open-house-day'
-            ],
-            'sold' => [
-                'sold-date', 'price', 'price-per-m2',
-                'fee', 'asked-price', 'price-change',
-                'address', 'area', 'living-area',
-                'item-link-container'
-            ]
-        );
+    private function format_date($date = '00 januari 1990') {
+        $m = [
+            'januari'   => 1,
+            'februari'  => 2,
+            'mars'      => 3,
+            'april'     => 4,
+            'maj'       => 5,
+            'juni'      => 6,
+            'juli'      => 7,
+            'augusti'   => 8,
+            'september' => 9,
+            'oktober'   => 10,
+            'november'  => 11,
+            'december'  => 12,
+        ];
 
-        return $type_map[$type];
+        preg_match('/^(\d+) (\w+) (\d+)$/', $date, $dp);
+        $formatted_date = sprintf('%d-%02d-%02d', $dp[3], $m[$dp[2]], $dp[1]);
+
+        return $formatted_date;
+    }
+
+    private function get_attributes() {
+        $class_map = [
+            'dom-classes' => [
+                'sold'     => '.sold-property-listing',
+                'for-sale' => '.result .normal',
+            ],
+            'address-extra' => [
+                'sold'     => 'salda/',
+                'for-sale' => null,
+            ],
+            'data-classes' => [
+                'address' => [
+                    'sold'     => '.item-result-meta-attribute-is-bold',
+                    'for-sale' => '.address',
+                ],
+                'age' => [
+                    'sold'     => null,
+                    'for-sale' => '.age',
+                ],
+                'price' => [
+                    'sold'     => '.sold-property-listing__price > .sold-property-listing__subheading',
+                    'for-sale' => '.price',
+                ],
+                'price-change' => [
+                    'sold'     => '.sold-property-listing__price-change',
+                    'for-sale' => null,
+                ],
+                'fee' => [
+                    'sold'     => '.sold-property-listing__fee',
+                    'for-sale' => '.fee',
+                ],
+                'size' => [
+                    'sold'     => '.sold-property-listing__size > .sold-property-listing__subheading',
+                    'for-sale' => '.living-area',
+                ],
+                'price-per-m2' => [
+                    'sold'     => '.sold-property-listing__price-per-m2',
+                    'for-sale' => '.price-per-m2',
+                ],
+                'url' => [
+                    'sold'     => '.item-link-container',
+                    'for-sale' => '.item-link-container',
+                ],
+                'image' => [
+                    'sold'     => null,
+                    'for-sale' => '.property-image',
+                ],
+                'sold-date' => [
+                    'sold'     => '.sold-property-listing__sold-date',
+                    'for-sale' => null,
+                ],
+                'sold-before-preview' => [
+                    'sold'     => '.ribbon--deactivated-before-open-house-day',
+                    'for-sale' => null,
+                ]
+            ]
+        ];
+
+        return $class_map;
     }
 }
