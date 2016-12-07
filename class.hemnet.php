@@ -75,14 +75,14 @@ class Hemnet extends WP_Widget {
                 printf( '<p class="estate sold-date">%s %s</p>', _x( 'Sold', 'Displayed before date', 'hemnet' ), $estate['sold-date'] );
             }
 
-            printf( '<p class="estate living-area">%s</p>', $estate['size'] );
-            printf( '<p class="estate fee">%s</p>', $estate['fee'] );
+            printf( '<p class="estate living-area">%s %s - %s %s</p>', $estate['living-area'], __( 'm²', 'hemnet' ), $estate['rooms'], _n( 'room', 'rooms', $estate['rooms'], 'hemnet' ) );
+            printf( '<p class="estate fee">%s %s</p>', $estate['fee'], __( 'kr/month', 'hemnet' ) );
 
             if ( $estate['price-per-m2'] && $instance['show_ppm2'] ) {
                 printf( '<p class="estate price">%s (%s %s)</p>', $estate['price'], $estate['price-per-m2'], __( 'kr/m²', 'hemnet' ) );
             } else {
                 // Might include "No price" information
-                printf( '<p class="estate price">%s</p>', $estate['price'] );
+                printf( '<p class="estate price">%s %s</p>', $estate['price'], __( 'kr', 'hemnet' ) );
             }
 
             if ( $instance['type'] == 'sold' ) {
@@ -246,7 +246,7 @@ class Hemnet extends WP_Widget {
                     $value = $data->{'data-src'};
 
                 // Some text cleanup...
-                $value = preg_replace( '/&nbsp;/', '', $value );
+                $value = preg_replace( '/&nbsp;/', ' ', $value );
                 $value = preg_replace( '/^\s+|\s+$/', '', $value );
                 $value = preg_replace( '/\s{2,}/', ' ', $value );
 
@@ -254,10 +254,19 @@ class Hemnet extends WP_Widget {
                 $value = preg_replace( '/Begärt pris: /', '', $value );
                 $value = preg_replace( '/Såld /', '', $value );
                 $value = preg_replace( '/Slutpris /', '', $value );
-                $value = preg_replace( '/ kr\/m²/', '', $value );
+                $value = preg_replace( '/ kr(\/m(²|ån))?/', '', $value );
 
                 if ( $key == 'sold-date' ) {
                     $value = $this->format_date( $value );
+                }
+
+                if ( $key == 'size' ) {
+                    preg_match( '/^([\d,]+) \D+ ([\d,]+) rum/', $value, $size_info );
+
+                    $objects[$i]['living-area'] = $size_info[1];
+                    $objects[$i]['rooms'] = $size_info[2];
+
+                    continue;
                 }
 
                 $objects[$i][$key] = $value;
