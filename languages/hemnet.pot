@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Hemnet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-27 21:37+0000\n"
+"POT-Creation-Date: 2016-12-07 20:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
@@ -32,16 +32,21 @@ msgid "Sold before preview"
 msgstr ""
 
 #: ../class.hemnet.php:75
+msgctxt "Displayed in widget before date"
+msgid "Sold"
+msgstr ""
+
+#: ../class.hemnet.php:124
+msgctxt "Displayed in settings dropdown"
 msgid "Sold"
 msgstr ""
 
 msgid "kr/m²"
 msgstr ""
 
-msgid "Price increase"
+msgid "Price change"
 msgstr ""
 
-#: ../class.hemnet.php:123
 msgid "For sale"
 msgstr ""
 
@@ -76,7 +81,7 @@ msgstr ""
 msgid "Display date after address (only for sold)"
 msgstr ""
 
-msgid "Display price increase (only for sold)"
+msgid "Display price change (only for sold)"
 msgstr ""
 
 msgid "Display price per m2"

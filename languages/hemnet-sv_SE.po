@@ -2,12 +2,12 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Hemnet\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-09-27 20:39+0000\n"
-"PO-Revision-Date: 2016-09-27 21:21+0000\n"
+"POT-Creation-Date: 2016-12-07 20:44+0000\n"
+"PO-Revision-Date: 2016-12-07 20:48+0000\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Language: sv-SE\n"
-"Plural-Forms: nplurals=2; plural=n!=1\n"
+"Plural-Forms: nplurals=2; plural=n != 1\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -31,22 +31,23 @@ msgid "Sold before preview"
 msgstr "Såld innan visning"
 
 #: ../class.hemnet.php:75
+msgctxt "Displayed in widget before date"
 msgid "Sold"
 msgstr "Såld"
+
+#: ../class.hemnet.php:124
+msgctxt "Displayed in settings dropdown"
+msgid "Sold"
+msgstr "Sålda"
 
 msgid "kr/m²"
 msgstr "kr/m²"
 
-msgid "Price increase"
-msgstr "Prisökning"
+msgid "Price change"
+msgstr "Prisändring"
 
-#: ../class.hemnet.php:123
 msgid "For sale"
 msgstr "Till salu"
-
-#: ../class.hemnet.php:124
-msgid "Sold"
-msgstr "Sålda"
 
 msgid "Title:"
 msgstr "Titel:"
@@ -83,8 +84,8 @@ msgstr "Formatering"
 msgid "Display date after address (only for sold)"
 msgstr "Visa datum efter adress (endast sålda)"
 
-msgid "Display price increase (only for sold)"
-msgstr "Visa prisökning (endast sålda)"
+msgid "Display price change (only for sold)"
+msgstr "Visa prisändring (endast sålda)"
 
 msgid "Display price per m2"
 msgstr "Visa pris per m2"
