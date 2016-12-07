@@ -321,7 +321,7 @@ class Hemnet extends WP_Widget {
         $class_map = [
             'dom-classes' => [
                 'sold'     => '.sold-property-listing',
-                'for-sale' => '.result .normal',
+                'for-sale' => '.results  > .result',
             ],
             'address-extra' => [
                 'sold'     => 'salda/',
@@ -369,8 +369,8 @@ class Hemnet extends WP_Widget {
                     'for-sale' => null,
                 ],
                 'sold-before-preview' => [
-                    'sold'     => '.ribbon--deactivated-before-open-house-day',
-                    'for-sale' => null,
+                    'sold'     => null,
+                    'for-sale' => '.ribbon--deactivated-before-open-house-day',
                 ]
             ]
         ];
