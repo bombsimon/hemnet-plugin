@@ -72,7 +72,7 @@ class Hemnet extends WP_Widget {
             }
 
             if ($instance['type'] == 'sold' && ! $instance['date_after_address']) {
-                printf( '<p class="estate sold-date">%s %s</p>', __( 'Sold', 'hemnet' ), $estate['sold-date'] );
+                printf( '<p class="estate sold-date">%s %s</p>', _x( 'Sold', 'Displayed before date', 'hemnet' ), $estate['sold-date'] );
             }
 
             printf('<p class="estate living-area">%s</p>', $estate['size']);
@@ -120,21 +120,21 @@ class Hemnet extends WP_Widget {
         <p>
             <label for="<?php echo $this->get_field_id( 'type' ); ?>"><?php _e( 'Type:', 'hemnet' ); ?></label>
             <select class="widefat" id="<?php echo $this->get_field_id( 'type' ); ?>" name="<?php echo $this->get_field_name( 'type' ); ?>">
-                <option value="for-sale" <?php echo $current_values['type'] == 'for-sale' ? 'selected' : '' ?>><?php echo __( 'For sale', 'hemnet' ) ?></option>
-                <option value="sold" <?php echo $current_values['type'] == 'sold' ? 'selected' : '' ?>><?php echo __( 'Sold', 'hemnet' ) ?></option>
+                <option value="for-sale" <?php echo $current_values['type'] == 'for-sale' ? 'selected' : '' ?>><?php _e( 'For sale', 'hemnet' ) ?></option>
+                <option value="sold" <?php echo $current_values['type'] == 'sold' ? 'selected' : '' ?>><?php _ex( 'Sold', 'In settings dropdown', 'hemnet' ) ?></option>
             </select>
         </p>
 
         <p>
             <label for="<?php echo $this->get_field_id( 'location_ids' ); ?>"><?php _e( 'Location ID\'s:', 'hemnet' ); ?></label>
             <input class="widefat" id="<?php echo $this->get_field_id( 'location_ids' ); ?>" name="<?php echo $this->get_field_name( 'location_ids' ); ?>" type="text" value="<?php echo esc_attr( $current_values['location_ids'] ); ?>">
-            <small><?php echo __( 'Comma separated list of "location_ids". Search your desired location and copy the last number from the URL from Hemnet.', 'hemnet' ) ?></small>
+            <small><?php _e( 'Comma separated list of "location_ids". Search your desired location and copy the last number from the URL from Hemnet.', 'hemnet' ) ?></small>
         </p>
 
         <p>
             <label for="<?php echo $this->get_field_id( 'exact_numbers' ); ?>"><?php _e( 'Exact numbers:', 'hemnet' ); ?></label>
             <input class="widefat" id="<?php echo $this->get_field_id( 'exact_numbers' ); ?>" name="<?php echo $this->get_field_name( 'exact_numbers' ); ?>" type="text" value="<?php echo esc_attr( $current_values['exact_numbers'] ); ?>">
-            <small><?php echo __( 'Comma separated list of specific numbers for a given address. Only use this with ONE location ID.', 'hemnet' ) ?></small>
+            <small><?php _e( 'Comma separated list of specific numbers for a given address. Only use this with ONE location ID.', 'hemnet' ) ?></small>
         </p>
 
         <p>
