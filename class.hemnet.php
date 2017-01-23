@@ -223,8 +223,15 @@ class Hemnet extends WP_Widget {
             return $objects;
 
         foreach ( $dom->find( $attributes['dom-classes'][$type] ) as $item ) {
-            foreach ( $attributes['data-classes'] as $key => $value ) {
-                $data = $item->find( $value[$type], 0 );
+            foreach ( $attributes['data-classes'] as $key => $element ) {
+                if ( ! isset( $element[$type] ) )
+                    continue;
+
+                $data = $item->find( $element[$type], 0 );
+
+                // Remove inner elements if data element contains children
+                if ( $element['remove'] && $data->find( $element['remove'], 0 ) )
+                    $data->find( $element['remove'], 0 )->innertext = '';
 
                 $value = $data->plaintext;
 
@@ -241,13 +248,16 @@ class Hemnet extends WP_Widget {
                 $value = preg_replace( '/Såld /', '', $value );
                 $value = preg_replace( '/Slutpris /', '', $value );
                 $value = preg_replace( '/ kr(\/m(²|ån))?/', '', $value );
+                $value = preg_replace( '/ rum/', '', $value );
+                $value = preg_replace( '/ m²/', '', $value );
 
                 if ( $key == 'sold-date' ) {
                     $value = $this->format_date( $value );
                 }
 
+                // Sold properties stores living area and rooms in the same element so we extract them
                 if ( $key == 'size' ) {
-                    preg_match( '/^([\d,]+) \D+ ([\d,]+) rum/', $value, $size_info );
+                    preg_match( '/^([\d,]+) ([\d,]+)/', $value, $size_info );
 
                     $objects[$i]['living-area'] = $size_info[1];
                     $objects[$i]['rooms']       = $size_info[2];
@@ -314,6 +324,7 @@ class Hemnet extends WP_Widget {
                 'address' => [
                     'sold'     => '.item-result-meta-attribute-is-bold',
                     'for-sale' => '.address',
+                    'remove'   => '.property-icon'
                 ],
                 'age' => [
                     'sold'     => null,
@@ -333,7 +344,15 @@ class Hemnet extends WP_Widget {
                 ],
                 'size' => [
                     'sold'     => '.sold-property-listing__size > .sold-property-listing__subheading',
+                    'for-sale' => null,
+                ],
+                'living-area' => [
+                    'sold'     => null,
                     'for-sale' => '.living-area',
+                ],
+                'rooms' => [
+                    'sold'     => null,
+                    'for-sale' => '.rooms',
                 ],
                 'price-per-m2' => [
                     'sold'     => '.sold-property-listing__price-per-m2',
