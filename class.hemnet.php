@@ -205,8 +205,8 @@ class Hemnet extends WP_Widget {
     }
 
     private function scrape_hemnet ( $args ) {
-        $location_ids  = split( ',', $args['location_ids'] );
-        $exact_numbers = $args['exact_numbers'] ? split( ',', $args['exact_numbers'] ) : [];
+        $location_ids  = explode( ',', $args['location_ids'] );
+        $exact_numbers = $args['exact_numbers'] ? explode( ',', $args['exact_numbers'] ) : [];
 
         $objects    = [];
         $attributes = $this->get_attributes();
@@ -323,8 +323,7 @@ class Hemnet extends WP_Widget {
             'data-classes' => [
                 'address' => [
                     'sold'     => '.item-result-meta-attribute-is-bold',
-                    'for-sale' => '.address',
-                    'remove'   => '.property-icon'
+                    'for-sale' => '.property-address--desktop-only',
                 ],
                 'age' => [
                     'sold'     => null,
