@@ -1,4 +1,11 @@
 <?php
+/**
+ * class.hemnet.php
+ *
+ * @package default
+ */
+
+
 /*
 Plugin Name:    Hemnet
 Plugin URI:     https://github.com/bombsimon/hemnet-plugin
@@ -19,13 +26,16 @@ if ( ! defined( 'ABSPATH' ) )
 
 
 add_action( 'widgets_init', function() {
-    wp_enqueue_style( 'hemnet', plugins_url( '_inc/style.css', __FILE__ ) );
-    register_widget( 'Hemnet' );
-});
+        wp_enqueue_style( 'hemnet', plugins_url( '_inc/style.css', __FILE__ ) );
+        register_widget( 'Hemnet' );
+    });
 
 load_plugin_textdomain( 'hemnet', FALSE, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 
 class Hemnet extends WP_Widget {
+    /**
+     * Construct the plugin by setting a name and description.
+     */
     function __construct() {
         parent::__construct(
             'Hemnet',
@@ -36,6 +46,13 @@ class Hemnet extends WP_Widget {
         );
     }
 
+
+    /**
+     * Implement the widget method from WP_Widget by rendering HTML.
+     *
+     * @param mixed[] $args
+     * @param mixed[] $instance settings for the widget instance
+     */
     public function widget( $args, $instance ) {
         echo $args['before_widget'];
 
@@ -103,7 +120,13 @@ class Hemnet extends WP_Widget {
         echo $args['after_widget'];
     }
 
-    public function form ( $instance ) {
+
+    /**
+     * Implement the form method for WP_Widget which will allow custom configuration.
+     *
+     * @param mixed[] $instance Current settings for the widget instance.
+     */
+    public function form( $instance ) {
         foreach ( $this->settings() as $setting => $data ) {
             $setting_value = $this->defined_or_fallback( $instance[$setting], $data['default-value'] );
 
@@ -138,6 +161,14 @@ class Hemnet extends WP_Widget {
         }
     }
 
+
+    /**
+     * Implement the update method for WP_Widget which will update the custom conifugration.
+     *
+     * @param mixed[] $new_instance The new configuration
+     * @param mixed[] $old_instance The old configuration
+     * @return string[] The new configuration
+     */
     public function update( $new_instance, $old_instance ) {
         $instance = [];
 
@@ -148,11 +179,27 @@ class Hemnet extends WP_Widget {
         return $instance;
     }
 
-    private function defined_or_fallback ( $defined, $fallback = '') {
+
+    /**
+     * Return the value of $defined or if it's not set (null), return the fallback value.
+     * The fallback value will default to an empty string.
+     *
+     * @param string|null $defined
+     * @param string $fallback (optional)
+     * @return string
+     */
+    private function defined_or_fallback( $defined, $fallback = '') {
         return isset( $defined ) ? $defined : $fallback;
     }
 
-    private function settings () {
+
+    /**
+     * Key-value definition of available settings to automatically render the
+     * settings panel for the widget.
+     *
+     * @return array
+     */
+    private function settings() {
         $settings = [
             'title' => [
                 'title'         => __( 'Title:', 'hemnet' ),
@@ -204,6 +251,13 @@ class Hemnet extends WP_Widget {
         return $settings;
     }
 
+
+    /**
+     * Get the source code from a given URL by fetching it with curl.
+     *
+     * @param string $url The URL to fetch
+     * @return string The source code
+     */
     private function get_html_source( $url ) {
         $curl = curl_init();
         curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, true );
@@ -220,7 +274,14 @@ class Hemnet extends WP_Widget {
         return $source_code;
     }
 
-    private function scrape_hemnet ( $args ) {
+
+    /**
+     * The actual scraping by traversing the DOM with CSS selectors.
+     *
+     * @param array $args Mixed settings for what and how to scrape.
+     * @return array List of objects from the scraped page
+     */
+    private function scrape_hemnet( $args ) {
         $location_ids  = explode( ',', $args['location_ids'] );
         $exact_numbers = $args['exact_numbers'] ? explode( ',', $args['exact_numbers'] ) : [];
 
@@ -314,6 +375,13 @@ class Hemnet extends WP_Widget {
         return $exact_matches;
     }
 
+
+    /**
+     * Format dates in ISO 8601 (ish) format from a string.
+     *
+     * @param string $date (optional) The date in format <day> <name-of-month> <year>
+     * @return string ISO 8601 formatted date without timezone
+     */
     private function format_date( $date = '1 januari 1990' ) {
         $m = [
             'januari'   => 1,
@@ -336,6 +404,12 @@ class Hemnet extends WP_Widget {
         return $formatted_date;
     }
 
+
+    /**
+     * Get a map of how to fetch different attributes for different object types.
+     *
+     * @return array
+     */
     private function get_attributes() {
         $class_map = [
             'dom-classes' => [
