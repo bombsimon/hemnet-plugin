@@ -204,6 +204,22 @@ class Hemnet extends WP_Widget {
         return $settings;
     }
 
+    private function get_html_source( $url ) {
+        $curl = curl_init();
+        curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, true );
+        curl_setopt( $curl, CURLOPT_HEADER, false );
+        curl_setopt( $curl, CURLOPT_FOLLOWLOCATION, true );
+        curl_setopt( $curl, CURLOPT_URL, $url );
+        curl_setopt( $curl, CURLOPT_REFERER, $url );
+        curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+
+        $source_code = curl_exec( $curl );
+
+        curl_close( $curl );
+
+        return $source_code;
+    }
+
     private function scrape_hemnet ( $args ) {
         $location_ids  = explode( ',', $args['location_ids'] );
         $exact_numbers = $args['exact_numbers'] ? explode( ',', $args['exact_numbers'] ) : [];
@@ -217,7 +233,10 @@ class Hemnet extends WP_Widget {
         $type = $args['type'];
 
         $hemnet_address = sprintf( 'http://www.hemnet.se/%sbostader?%s', $attributes['address-extra'][$type], join( '&', array_map( function( $id ) { return sprintf( 'location_ids[]=%d', $id ); }, $location_ids ) ) );
-        $dom            = @file_get_html( $hemnet_address );
+        $hemnet_source  = $this->get_html_source( $hemnet_address );
+
+        $dom = new simple_html_dom();
+        $dom->load( $hemnet_source );
 
         if ( ! $dom )
             return $objects;
@@ -227,29 +246,36 @@ class Hemnet extends WP_Widget {
                 if ( ! isset( $element[$type] ) )
                     continue;
 
-                $data = $item->find( $element[$type], 0 );
+                // PHP Simple HTML DOM Parser does not support nth-child CSS
+                // selectors so we must check if we given a specific index.
+                $ci   = array_key_exists( sprintf( '%s-i', $type ), $element ) ? $element[ sprintf( '%s-i', $type ) ] : 0;
+                $data = $item->find( $element[$type], $ci );
 
                 // Remove inner elements if data element contains children
-                if ( $element['remove'] && $data->find( $element['remove'], 0 ) )
-                    $data->find( $element['remove'], 0 )->innertext = '';
+                if ( array_key_exists( 'remove', $element) && count( $element['remove'] ) > 0 ) {
+                    foreach ( $element['remove'] as $remove_child ) {
+                        if ( $data->find( $remove_child, 0 ) )
+                            $data->find( $remove_child, 0 )->innertext = '';
+                    }
+                }
 
                 $value = $data->plaintext;
 
                 if ( $key == 'url' )
-                    $value = sprintf( '%s%s', $args['type'] == 'for-sale' ? 'http://www.hemnet.se' : '', $data->href );
+                    $value = $data->href;
 
                 if ( $key == 'image' )
                     $value = $data->{'data-src'};
 
                 $value = preg_replace( '/&nbsp;/', ' ', $value );
-                $value = preg_replace( '/^\s+|\s+$/', '', $value );
                 $value = preg_replace( '/\s{2,}/', ' ', $value );
                 $value = preg_replace( '/Begärt pris: /', '', $value );
                 $value = preg_replace( '/Såld /', '', $value );
                 $value = preg_replace( '/Slutpris /', '', $value );
-                $value = preg_replace( '/ kr(\/m(²|ån))?/', '', $value );
                 $value = preg_replace( '/ rum/', '', $value );
+                $value = preg_replace( '/kr(\/m(²|ån))?/', '', $value );
                 $value = preg_replace( '/ m²/', '', $value );
+                $value = preg_replace( '/^\s+|\s+$/', '', $value );
 
                 if ( $key == 'sold-date' ) {
                     $value = $this->format_date( $value );
@@ -314,7 +340,7 @@ class Hemnet extends WP_Widget {
         $class_map = [
             'dom-classes' => [
                 'sold'     => '.sold-property-listing',
-                'for-sale' => '.results  > .result',
+                'for-sale' => '.listing-card--normal',
             ],
             'address-extra' => [
                 'sold'     => 'salda/',
@@ -323,15 +349,18 @@ class Hemnet extends WP_Widget {
             'data-classes' => [
                 'address' => [
                     'sold'     => '.item-result-meta-attribute-is-bold',
-                    'for-sale' => '.property-address--desktop-only',
+                    'for-sale' => '.listing-card__address--normal',
+                    'remove'   => [
+                        'title', 'span',
+                    ],
                 ],
                 'age' => [
                     'sold'     => null,
-                    'for-sale' => '.age',
+                    'for-sale' => '.normal-results__age',
                 ],
                 'price' => [
                     'sold'     => '.sold-property-listing__price > .sold-property-listing__subheading',
-                    'for-sale' => '.price',
+                    'for-sale' => '.listing-card__attributes--primary > .listing-card__attribute--primary',
                 ],
                 'price-change' => [
                     'sold'     => '.sold-property-listing__price-change',
@@ -339,31 +368,33 @@ class Hemnet extends WP_Widget {
                 ],
                 'fee' => [
                     'sold'     => '.sold-property-listing__fee',
-                    'for-sale' => '.fee',
+                    'for-sale' => '.listing-card__attribute--fee',
                 ],
                 'size' => [
                     'sold'     => '.sold-property-listing__size > .sold-property-listing__subheading',
                     'for-sale' => null,
                 ],
                 'living-area' => [
-                    'sold'     => null,
-                    'for-sale' => '.living-area',
+                    'sold'       => null,
+                    'for-sale'   => '.listing-card__attributes--primary > .listing-card__attribute--primary',
+                    'for-sale-i' => 1,
                 ],
                 'rooms' => [
-                    'sold'     => null,
-                    'for-sale' => '.rooms',
+                    'sold'       => null,
+                    'for-sale'   => '.listing-card__attributes--primary > .listing-card__attribute--primary',
+                    'for-sale-i' => 2,
                 ],
                 'price-per-m2' => [
                     'sold'     => '.sold-property-listing__price-per-m2',
-                    'for-sale' => '.price-per-m2',
+                    'for-sale' => '.listing-card__attribute--square-meter-price',
                 ],
                 'url' => [
                     'sold'     => '.item-link-container',
-                    'for-sale' => '.item-link-container',
+                    'for-sale' => '.listing-card__link',
                 ],
                 'image' => [
                     'sold'     => null,
-                    'for-sale' => '.property-image',
+                    'for-sale' => null,
                 ],
                 'sold-date' => [
                     'sold'     => '.sold-property-listing__sold-date',
