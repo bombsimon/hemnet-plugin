@@ -44,7 +44,7 @@ a Docker setup such as this
 [wordpress-nginx-docker](https://github.com/mjstealey/wordpress-nginx-docker)
 setup.
 
-For code formatting I've used [phptidy](https://github.com/cmrcx/phptidy) which
-I don't know if it's a good tool but at least it allows me to do some kind of
-code formatting. However I could stand the tabs so they're replaced with 4
-spaces.
+For code formatting I've used the default settings from IntelliJ/PhpStorm with
+the only change to align key-value pairs. See
+[this](https://stackoverflow.com/questions/29795116/stop-phpstorm-from-aligning-associative-arrays)
+post for how to do that.
