@@ -57,6 +57,9 @@ class Hemnet
                 if (!isset($element[$type]))
                     continue;
 
+                if (!array_key_exists($i, $objects))
+                    $objects[$i] = [];
+
                 // PHP Simple HTML DOM Parser does not support nth-child CSS
                 // selectors so we must check if we given a specific index.
                 $ci = array_key_exists(sprintf('%s-i', $type), $element) ? $element[sprintf('%s-i', $type)] : 0;
@@ -71,8 +74,11 @@ class Hemnet
                         continue;
                     } elseif ($this->strict) {
                         die("DATA FOR '$key' MISSING: Could not find '$element[$type]'\n");
+                    } else {
+                        continue;
                     }
                 }
+
 
                 // Remove inner elements if data element contains children
                 if (array_key_exists('remove', $element) && count($element['remove']) > 0) {
@@ -115,8 +121,10 @@ class Hemnet
                 if ($key == 'size') {
                     preg_match('/^([\d,]+) ([\d,]+)/', $value, $size_info);
 
-                    $objects[$i]['living-area'] = $size_info[1];
-                    $objects[$i]['rooms'] = $size_info[2];
+                    if (count($size_info) >= 3) {
+                        $objects[$i]['living-area'] = $size_info[1];
+                        $objects[$i]['rooms'] = $size_info[2];
+                    }
 
                     continue;
                 }
@@ -133,11 +141,10 @@ class Hemnet
         $exact_matches = [];
         foreach ($objects as $obj) {
             foreach ($exact_numbers as $exact) {
-                preg_match('/^(\D+) (\d+)\w?(,|$)/', $obj['address'], $address);
+                preg_match('/^(\D+) (\d+)\w?([, ]|$)/', $obj['address'], $address);
 
-                if ($address[2] == $exact) {
+                if (count($address) >= 3 && $address[2] == $exact)
                     $exact_matches[] = $obj;
-                }
             }
         }
 
@@ -214,7 +221,7 @@ class Hemnet
             ],
             'data-classes'  => [
                 'address'             => [
-                    'sold'     => '.item-result-meta-attribute-is-bold',
+                    'sold'     => '.qa-selling-price-title',
                     'for-sale' => '.listing-card__street-address',
                     'remove'   => [
                         'title', 'span',
@@ -238,7 +245,7 @@ class Hemnet
                     'for-sale' => '.listing-card__attribute--fee',
                 ],
                 'size'                => [
-                    'sold'     => '.sold-property-listing__size > .clear-children > .sold-property-listing__subheading',
+                    'sold'     => '.sold-property-listing__area',
                     'for-sale' => null,
                 ],
                 'living-area'         => [
@@ -256,7 +263,7 @@ class Hemnet
                     'for-sale' => '.listing-card__attribute--square-meter-price',
                 ],
                 'url'                 => [
-                    'sold'     => '.item-link-container',
+                    'sold'     => '.sold-property-link',
                     'for-sale' => '.js-listing-card-link',
                 ],
                 'image'               => [
