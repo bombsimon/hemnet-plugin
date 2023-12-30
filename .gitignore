@@ -1,3 +1,5 @@
+.php-cs-fixer.cache
+
 # Created by https://www.gitignore.io/api/git,vim,wordpress
 
 ### Git ###
@@ -35,4 +37,3 @@ wp-content/plugins/hello.php
 /readme.html
 /sitemap.xml
 /sitemap.xml.gz
-

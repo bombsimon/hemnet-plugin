@@ -5,9 +5,9 @@
  * need to fire up a Wordpress instance.
  */
 
-include_once 'hemnet.php';
+require_once 'hemnet.php';
 
-$hemnet = new Hemnet(TRUE);
+$hemnet = new Hemnet(true);
 
 printf("SOLD\n");
 $sold = $hemnet->scrape_hemnet([898472], 'sold', [153, 49, 59, 11]);
