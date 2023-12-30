@@ -1,191 +1,235 @@
 <?php
 
-include_once '_inc/simple_html_dom.php';
+/**
+ * Hemnet is a tool to fetch data from https://www.hemnet.se
+ * php version 7
+ *
+ * @category Wordpres_Plugin
+ * @package  Hemnet
+ * @author   Simon Sawert <simon@sawert.se>
+ * @license  https://opensource.org/license/mit/ MIT
+ * @link     https://github.com/bombsimon/hemnet-plugin
+ */
+
+require_once "vendor/autoload.php";
+
+use voku\helper\HtmlDomParser;
 
 /**
- * Class Hemnet is a Hemnet scraper. Given location ID(s) (found by searching on
- * the Hemnet webpage) and a type (for sale or sold items) this class will
- * scrape the result. All items will be stored, if exact nubmers are desired,
- * pass them as a third argument to `scrape_hemnet`.
+ * Hemnet is a parser to parse Hemnet HTML DOM.
  */
 class Hemnet
 {
     /**
-     * @var bool Strict mode for the class.
+     * Hemnet is a plugin that fetches data from https://hemnet.se.
      */
-    private $strict;
+    private int    $_cache_seconds;
+    private int    $_last_fetched_sold;
+    private int    $_last_fetched_for_sale;
+    private string $_sold_dom;
+    private string $_for_sale_dom;
 
 
     /**
      * Hemnet constructor.
-     * @param bool $strict Strict mode will die on errors.
+     *
+     * If you are using this in a static manner like showing listings for your
+     * BRF with the Wordpress plugin you might want to cache the DOM. The
+     * caching mechanism is very simple and doesn't not take exact numbers into
+     * account. If you are calling listings for different locations you might
+     * want to disable the cache (setting it to 0).
+     *
+     * @param int $cache_seconds How long to cache the HTML DOM for listings.
      */
-    public function __construct($strict = false)
+    public function __construct(int $cache_seconds = 300)
     {
-        $this->strict = $strict;
+        $this->_cache_seconds = $cache_seconds;
+        $this->_last_fetched_sold = 0;
+        $this->_last_fetched_for_sale = 0;
+    }
+
+    /**
+     * Get all listings for sale with the given location ids.
+     *
+     * This currently does not support pagination so if you expect more than the
+     * single page result try to use fewer IDs.
+     *
+     * @param int[] $location_ids List of area IDs from the page.
+     *
+     * @return Listing[] List of objects from the scraped page
+     */
+    public function getListingsForSale(array $location_ids): array
+    {
+        $listings = [];
+
+        $html = $this->_getHemnetSource($location_ids, "");
+        $dom = HtmlDomParser::str_get_html($html);
+
+        foreach ($dom->findMulti(".hcl-card") as $listing_card) {
+            // Ads link to external pages and have a target set so we know we
+            // can skip them.
+            if ($listing_card->target) {
+                continue;
+            }
+
+            $address = $listing_card->findOneOrFalse(".hcl-card__title");
+            if (!$address) {
+                continue;
+            }
+
+            $sale_data = $listing_card->findMultiOrFalse(
+                ".hcl-grid--columns-4 > div"
+            );
+            if (!$sale_data) {
+                continue;
+            }
+
+            $price        = $sale_data[0];
+            $living_area  = $sale_data[1];
+            $rooms        = $sale_data[2];
+            $floor        = $sale_data[3];
+            $fee          = $sale_data[4];
+            $price_psqm   = $sale_data[5];
+
+            $listings[] = new Listing(
+                sprintf("https://www.hemnet.se%s", $listing_card->href),
+                $address->plaintext,
+                $price ? $price->plaintext : null,
+                $living_area ? $living_area->plaintext : null,
+                $rooms ? $rooms->plaintext : null,
+                $floor ? $floor->plaintext : null,
+                $fee ? $fee->plaintext : null,
+                $price_psqm ? $price_psqm->plaintext : null,
+            );
+        }
+
+        return $listings;
+    }
+
+    /**
+     * Get all listings sold with the given location ids.
+     *
+     * This currently does not support pagination so if you expect more than the
+     * single page result try to use fewer IDs.
+     *
+     * @param int[] $location_ids List of area IDs from the page.
+     *
+     * @return Listing[] List of objects from the scraped page
+     */
+    public function getListingsSold(array $location_ids): array
+    {
+        $listings = [];
+
+        $html = $this->_getHemnetSource($location_ids, "salda/");
+        $dom = HtmlDomParser::str_get_html($html);
+
+        foreach ($dom->findMulti(".hcl-card") as $listing_card) {
+            // Ads link to external pages and have a target set so we know we
+            // can skip them.
+            if ($listing_card->target) {
+                continue;
+            }
+
+            $address = $listing_card->findOneOrFalse(".hcl-card__title");
+            if (!$address) {
+                continue;
+            }
+
+            $sold_data = $listing_card->findMultiOrFalse(".hcl-text");
+            if (!$sold_data) {
+                continue;
+            }
+
+            if (count($sold_data) < 6) {
+                continue;
+            }
+
+            $living_area  = $sold_data[0];
+            $rooms        = $sold_data[1];
+            $fee          = $sold_data[2];
+            $price        = $sold_data[3];
+            $price_change = $sold_data[4];
+            $price_psqm   = $sold_data[5];
+            $sold_at      = $listing_card->findOneOrFalse(".hcl-label--sold-at");
+
+
+            $listings[] = new Listing(
+                sprintf("https://www.hemnet.se%s", $listing_card->href),
+                $address->plaintext,
+                $price ? $price->plaintext : null,
+                $living_area ? $living_area->plaintext : null,
+                $rooms ? $rooms->plaintext : null,
+                null, // We don't know floor for sold items.
+                $fee ? $fee->plaintext : null,
+                $price_psqm ? $price_psqm->plaintext : null,
+                $price_change ? $price_change->plaintext : null,
+                $sold_at ? $sold_at->plaintext : null,
+            );
+        }
+
+        return $listings;
     }
 
     /**
      * The actual scraping by traversing the DOM with CSS selectors.
      *
-     * @param array $args Mixed settings for what and how to scrape.
-     * @return array List of objects from the scraped page
+     * @param int[]  $location_ids List of area IDs from the page.
+     * @param string $extra        Sold or For sale
+     *
+     * @return string DOM for the desired listing type.
      */
-    public function scrape_hemnet($location_ids, $type, $exact_numbers)
+    private function _getHemnetSource(array $location_ids, string $extra): string
     {
-        $objects = [];
-        $attributes = $this->get_attributes();
+        $last_fetched = $extra
+            ? $this->_last_fetched_sold
+            : $this->_last_fetched_for_sale;
 
-        if (!$attributes) {
-            return $objects;
-        }
+        if (time() - $last_fetched < $this->_cache_seconds) {
+            $cached_dom = $extra
+                ? $this->_sold_dom
+                : $this->_for_sale_dom;
 
-        $location_id_string = join('&', array_map(function ($id) {
-            return sprintf('location_ids[]=%d', $id);
-        }, $location_ids));
-        $hemnet_address = sprintf('http://www.hemnet.se/%sbostader?%s', $attributes['address-extra'][$type], $location_id_string);
-        $hemnet_source = $this->get_html_source($hemnet_address);
-
-        $dom = new simple_html_dom();
-        $dom->load($hemnet_source);
-
-        if (!$dom) {
-            return $objects;
-        }
-
-        $i = 0;
-        foreach ($dom->find($attributes['dom-classes'][$type]) as $item) {
-            // Ads link to external pages so skip those.
-            if ($item->target) {
-                continue;
-            }
-
-            // Carousel at the top doesn't have an address so skip those.
-            if (!$item->find($attributes['data-classes']['address'][$type])) {
-                continue;
-            }
-
-            // Skip highlights.
-            if ($item->class && str_contains($item->class, "hcl-card--highlighted")) {
-                continue;
-            }
-
-            foreach ($attributes['data-classes'] as $key => $element) {
-                if (!isset($element[$type])) {
-                    continue;
-                }
-
-                if (!array_key_exists($i, $objects)) {
-                    $objects[$i] = [];
-                }
-
-                // PHP Simple HTML DOM Parser does not support nth-child CSS
-                // selectors so we must check if we given a specific index.
-                $ci = array_key_exists(sprintf('%s-i', $type), $element) ? $element[sprintf('%s-i', $type)] : 0;
-                $data = $item->find($element[$type], $ci);
-
-                if (!$data) {
-                    if ($key == 'sold-before-preview') {
-                        $objects[$i][$key] = false;
-                        continue;
-                    } elseif ($key == 'price-change') {
-                        $objects[$i][$key] = '+/- 0%';
-                        continue;
-                    } elseif ($this->strict) {
-                        die("DATA FOR '$key' MISSING: Could not find '$element[$type]'\n");
-                    } else {
-                        continue;
-                    }
-                }
-
-
-                // Remove inner elements if data element contains children
-                if (array_key_exists('remove', $element) && count($element['remove']) > 0) {
-                    foreach ($element['remove'] as $remove_child) {
-                        if ($data->find($remove_child, 0)) {
-                            $data->find($remove_child, 0)->innertext = '';
-                        }
-                    }
-                }
-
-                $value = $data->plaintext;
-
-                if ($key == 'url') {
-                    $value = $data->href;
-                }
-
-                if ($key == 'image') {
-                    $value = $data->{'data-src'};
-                }
-
-
-                // Non breaking space, isn't caught by \s or trim()...
-                $breaking_space = urldecode("%C2%A0");
-                $value = preg_replace("/$breaking_space/", ' ', $value);
-
-                $value = preg_replace('/&nbsp;/', ' ', $value);
-                $value = preg_replace('/\s{2,}/', ' ', $value);
-                $value = preg_replace('/Begärt pris: /', '', $value);
-                $value = preg_replace('/Såld /', '', $value);
-                $value = preg_replace('/Slutpris /', '', $value);
-                $value = preg_replace('/ rum/', '', $value);
-                $value = preg_replace('/kr(\/m(²|ån))?/', '', $value);
-                $value = preg_replace('/ m²/', '', $value);
-                $value = preg_replace('/^\s+|\s+$/', '', $value);
-
-                if ($key == 'sold-date') {
-                    $value = $this->format_date($value);
-                }
-
-                if ($key == 'sold-before-preview') {
-                    $value = true;
-                }
-
-                // Sold properties stores living area and rooms in the same
-                // element so we extract them
-                if ($key == 'size') {
-                    preg_match('/^([\d,]+) ([\d,]+)/', $value, $size_info);
-
-                    if (count($size_info) >= 3) {
-                        $objects[$i]['living-area'] = $size_info[1];
-                        $objects[$i]['rooms'] = $size_info[2];
-                    }
-
-                    continue;
-                }
-
-                $objects[$i][$key] = $value;
-            }
-
-            $objects[$i]['url'] = sprintf("https://www.hemnet.se%s", $item->href);
-            $i++;
-        }
-
-        if (!count($exact_numbers)) {
-            return $objects;
-        }
-
-        $exact_matches = [];
-        foreach ($objects as $obj) {
-            foreach ($exact_numbers as $exact) {
-                preg_match('/^(\D+) (\d+)\w?([, ]|$)/', $obj['address'], $address);
-
-                if (count($address) >= 3 && $address[2] == $exact) {
-                    $exact_matches[] = $obj;
-                }
+            if (isset($cached_dom)) {
+                return $cached_dom;
             }
         }
 
-        return $exact_matches;
+        $location_id_string = join(
+            "&",
+            array_map(
+                function ($id) {
+                    return sprintf("location_ids[]=%d", $id);
+                },
+                $location_ids
+            ),
+        );
+        $hemnet_address = sprintf(
+            "http://www.hemnet.se/%sbostader?%s",
+            $extra,
+            $location_id_string,
+        );
+
+        $dom = $this->_getSource($hemnet_address);
+
+        if ($extra) {
+            $this->_last_fetched_sold = time();
+            $this->_sold_dom = $dom;
+        } else {
+            $this->_last_fetched_for_sale = time();
+            $this->_for_sale_dom = $dom;
+        }
+
+        return $dom;
     }
 
     /**
-     * Get the source code from a given URL by fetching it with curl.
+     * Get the source code from a URL.
      *
-     * @param string $url The URL to fetch
-     * @return string The source code
+     * @param string $url The page to fetch source code for
+     *
+     * @return strin HTML DOM.
      */
-    private function get_html_source($url)
+    private function _getSource(string $url): string
     {
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
@@ -200,14 +244,194 @@ class Hemnet
 
         return $source_code;
     }
+}
+
+/**
+ * Listing is a single listing item, for sale or sold, found at Hemnet.
+ */
+class Listing
+{
+    public string   $url;
+    public string   $street;
+    public int      $street_number;
+    public string   $street_number_letter;
+    public int      $price;
+    public float    $living_area;
+    public float    $living_bi_area;
+    public float    $rooms;
+    public float    $floor;
+    public int      $fee;
+    public int      $price_per_square_meter;
+    public int      $price_change;
+    public DateTime $sold_at;
+
 
     /**
-     * Format dates in ISO 8601 (ish) format from a string.
+     * Constructor of listing object.
      *
-     * @param string $date (optional) The date in format <day> <name-of-month> <year>
-     * @return string ISO 8601 formatted date without timezone
+     * Most of the data passed is expected to not be sanitized and therefor the
+     * constructor will do this. This includes things like splitting the address
+     * to street, number and letter, parsing floor number and living area,
+     * keeping only digits for numeric fields etc.
+     *
+     * @param string $url                    The URL to the listing
+     * @param string $address                The address
+     * @param string $price                  The price
+     * @param string $living_area            The living area
+     * @param string $rooms                  The number of rooms
+     * @param string $floor                  The floor/level
+     * @param string $fee                    The fee
+     * @param string $price_per_square_meter The price per square meter
+     * @param string $price_change           The change in price
+     * @param string $sold_at                The date sold
+     *
+     * @return strin HTML DOM.
      */
-    private function format_date($date = '1 januari 1990')
+    public function __construct(
+        string $url,
+        string $address,
+        string $price,
+        string $living_area,
+        string $rooms,
+        ?string $floor,
+        string $fee,
+        string $price_per_square_meter,
+        ?string $price_change = null,
+        ?string $sold_at = null,
+    ) {
+        [
+            $_,
+            $street,
+            $street_number,
+            $street_number_letter,
+            $parsed_floor,
+        ] = $this->_parseAddress($address);
+
+        [
+            $this->living_area,
+            $this->living_bi_area,
+        ] = $this->_parseLivingArea($living_area);
+
+        if ($floor) {
+            $this->floor = $this->_parseFloor($floor);
+        } elseif ($parsed_floor) {
+            $this->floor = floatval($parsed_floor);
+        }
+
+        if ($street_number) {
+            $this->street = $street;
+            $this->street_number = intval($street_number);
+        } else {
+            // Some addresses doesn"t have any number, it's just a street or
+            // similar. If so just set the whole address as the street.
+            $this->street = $address;
+        }
+
+        if ($street_number_letter) {
+            $this->street_number_letter = $street_number_letter;
+        }
+
+        if ($price_change) {
+            $this->price_change = _keepNumbers($price_change);
+        }
+
+        if ($sold_at) {
+            $this->sold_at = $this->_parseSoldAt($sold_at);
+        }
+
+        $this->url                    = $url;
+        $this->rooms                  = floatval($rooms);
+        $this->price                  = _keepNumbers($price);
+        $this->fee                    = _keepNumbers($fee);
+        $this->price_per_square_meter = _keepNumbers($price_per_square_meter);
+    }
+
+    /**
+     * Parse the address.
+     *
+     * @param string $address The original address
+     *
+     * @return mixed[] Array with [street, street_no, street_letter, floor]
+     */
+    private function _parseAddress(string $address): array
+    {
+        preg_match("/^(\D+) (\d+)?([A-Z])?(.*)$/", $address, $parsed);
+
+        if (!$parsed[4]) {
+            return $parsed;
+        }
+
+        preg_match("/(?:Vån )?(\d+)(?:\s?tr)?/i", $parsed[4], $floor_matches);
+        if (count($floor_matches)) {
+            $parsed[4] = $floor_matches[1];
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * Parse the floor.
+     *
+     * @param string $floor The original floor string
+     *
+     * @return int The parsed floor
+     *
+     * This field tends to be very varying so we try to just keep the number
+     * that actually represents the floor. f.ex this supports:
+     *   - 8tr
+     *   - 8/6
+     *   - vån 8
+     *   + Vån 8/10
+     */
+    private function _parseFloor(string $floor): int
+    {
+        preg_match("/^(?:vån )?(\d+)/i", $floor, $parsed_floor);
+        if (!count($parsed_floor) > 1) {
+            return null;
+        }
+
+        return floatval($parsed_floor[1]);
+    }
+
+    /**
+     * Parse the living area.
+     *
+     * This field tends to be very varying so we try to just keep the number
+     * that actually represents the floor. f.ex this supports:
+     *   - 8tr
+     *   - 8/6
+     *   - vån 8
+     *   + Vån 8/10
+     *
+     * @param string $living_area The original living area
+     *
+     * @return flaot[] with [living_area, bi_area]
+     */
+    private function _parseLivingArea(string $living_area): array
+    {
+        $living_area = preg_replace("/m²/", "", $living_area);
+        $living_area = preg_replace("/,/", ".", $living_area);
+        $living_area = preg_replace("/bv/i", "0", $living_area);
+
+        $areas = explode("+", $living_area);
+        if (count($areas) == 1) {
+            return [floatval($areas[0]), 0.0];
+        }
+
+        return [floatval($areas[0]), floatval($areas[1])];
+    }
+
+    /**
+     * Parse the sold date.
+     *
+     * Sold date is in an arbitrary Swedish format but we want to use a proper
+     * ISO formatted date.
+     *
+     * @param string $sold_at The original sold at string
+     *
+     * @return DateTime Object with 00:00 timestamp and no timezone.
+     */
+    private function _parseSoldAt(string $sold_at): DateTime
     {
         $m = [
             'jan' => 1,
@@ -224,81 +448,145 @@ class Hemnet
             'dec' => 12,
         ];
 
-        preg_match('/^(\d+) (\w+). (\d+)$/', $date, $dp);
-        $formatted_date = sprintf('%d-%02d-%02d', $dp[3], $m[$dp[2]], $dp[1]);
+        preg_match('/^Såld (\d+) (\w+). (\d+)$/', $sold_at, $sold_at_parts);
+        $formatted_date = sprintf(
+            '%d-%02d-%02d',
+            $sold_at_parts[3],
+            $m[$sold_at_parts[2]],
+            $sold_at_parts[1],
+        );
 
-        return $formatted_date;
+        return new DateTime($formatted_date);
     }
-
 
     /**
-     * Get a map of how to fetch different attributes for different object types.
+     * Get the address.
      *
-     * @return array
+     * This will use all available data from street, street number and street
+     * number letter and return them in a consistent way.
+     *
+     * @return string Address with street, street number and street letter.
      */
-    private function get_attributes()
+    public function address(): string
     {
-        $class_map = [
-            'dom-classes'   => [
-                'sold'     => '.hcl-card',
-                'for-sale' => '.hcl-card',
-            ],
-            'address-extra' => [
-                'sold'     => 'salda/',
-                'for-sale' => null,
-            ],
-            'data-classes'  => [
-                'address'             => [
-                    'sold'     => '.hcl-card__title',
-                    'for-sale' => '.hcl-card__title',
-                ],
-                'price'               => [
-                    'sold'       => '.hcl-text',
-                    'for-sale'   => '.hcl-grid--columns-4 > div',
-                    'sold-i'     => 3,
-                    'for-sale-i' => 0,
-                ],
-                'living-area'         => [
-                    'sold'       => '.hcl-text',
-                    'for-sale'   => '.hcl-grid--columns-4 > div',
-                    'sold-i'     => 0,
-                    'for-sale-i' => 1,
-                ],
-                'rooms'               => [
-                    'sold'       => '.hcl-text',
-                    'for-sale'   => '.hcl-grid--columns-4 > div',
-                    'sold-i'     => 1,
-                    'for-sale-i' => 2,
-                ],
-                'floor'               => [
-                    'sold'       => null,
-                    'for-sale'   => '.hcl-grid--columns-4 > div',
-                    'for-sale-i' => 3,
-                ],
-                'fee'                 => [
-                    'sold'       => '.hcl-text',
-                    'for-sale'   => '.hcl-grid--columns-4 > div',
-                    'sold-i'     => 2,
-                    'for-sale-i' => 4,
-                ],
-                'price-per-m2'        => [
-                    'sold'       => '.hcl-text',
-                    'for-sale'   => '.hcl-grid--columns-4 > div',
-                    'sold-i'     => 5,
-                    'for-sale-i' => 5,
-                ],
-                'price-change'        => [
-                    'sold'     => '.hcl-text',
-                    'for-sale' => null,
-                    'sold-i'   => 4,
-                ],
-                'sold-date'           => [
-                    'sold'     => '.hcl-label--sold-at',
-                    'for-sale' => null,
-                ],
-            ]
-        ];
+        $address = $this->street;
 
-        return $class_map;
+        if (isset($this->street_number)) {
+            $address .= " " . $this->street_number;
+        }
+
+        if (isset($this->street_number_letter)) {
+            $address .= $this->street_number_letter;
+        }
+
+        return $address;
     }
+
+    /**
+     * Formatted price with delimited number and suffix.
+     *
+     * @return string Formatted price.
+     */
+    public function formattedPrice(): string
+    {
+        return sprintf("%s kr", _formatNumber($this->price));
+    }
+
+    /**
+     * Formatted price per square meter with delimited number and suffix.
+     *
+     * @return string Formatted price per square meter.
+     */
+    public function formattedPricePerSquareMeter(): string
+    {
+        return sprintf("%s kr/m²", _formatNumber($this->price_per_square_meter));
+    }
+
+    /**
+     * Formatted fee with delimited number and suffix.
+     *
+     * @return string Formatted fee.
+     */
+    public function formattedFee(): string
+    {
+        return sprintf("%s kr", _formatNumber($this->fee));
+    }
+
+    /**
+     * Formatted living area with suffix. Will include both living area and bi
+     * area if any.
+     *
+     * @return string Formatted living area.
+     */
+    public function formattedLivingArea(): string
+    {
+        $bi_area = "";
+        if (isset($this->living_bi_area) && $this->living_bi_area) {
+            $bi_area = sprintf(" + %sm²", $this->living_bi_area);
+        }
+
+        return sprintf("%sm²%s ", $this->living_area, $bi_area);
+    }
+
+    /**
+     * Formatted price change with suffix.
+     *
+     * @return string Formatted price change.
+     */
+    public function formattedPriceChange(): string
+    {
+        return sprintf("%d%%", _formatNumber($this->price_change));
+    }
+}
+
+/**
+ * Strip everything by numbers from a string.
+ *
+ * This is mostly here to make it clear in the code what we do even though it's
+ * a single line of a `preg_replace`.
+ *
+ * @param $str The string containing some digits.
+ *
+ * @return int The integer value when only numbers are kept.
+ */
+function _keepNumbers($str): int
+{
+    return intval(preg_replace('/[^0-9-]+/', '', $str));
+}
+
+/**
+ * Format number to a space delimited string and no decimals.
+ *
+ * @param int $number The number to format as a string
+ *
+ * @return string Pretty formatted string.
+ */
+function _formatNumber($number): string
+{
+    return number_format($number, 0, ',', ' ');
+}
+
+/**
+ * Filter exact numbers from listing results. Will filter _in_ (keep) addresses with
+ * the passed numbers.
+ *
+ * @param Listing[] $listings        The listings to filter
+ * @param int[]     $include_numbers The numbers to include
+ *
+ * @return Listing[] Listings matching the exact numbers.
+ */
+function filterExactNumbers(array $listings, array $include_numbers): array
+{
+    return array_values(
+        array_filter(
+            $listings,
+            function ($listing) use ($include_numbers) {
+                if (!isset($listing->street_number)) {
+                    return false;
+                }
+
+                return in_array($listing->street_number, $include_numbers);
+            },
+        )
+    );
 }

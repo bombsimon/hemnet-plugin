@@ -129,6 +129,12 @@ msgstr "Visa datum efter adress (endast sålda)"
 msgid "Display price per m2"
 msgstr "Visa pris per m²"
 
+msgid "No price information."
+msgstr "Ingen prisinformation."
+
+msgid "month"
+msgstr "mån"
+
 #. Plugin URI of the plugin/theme
 msgid "https://github.com/bombsimon/hemnet-plugin"
 msgstr "https://github.com/bombsimon/hemnet-plugin"

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<ruleset name="Hemnet">
+    <rule ref="PEAR">
+        <!-- I don't get why you would document license and author for _each_
+        class. Since that makes no sense I've disabled it. -->
+        <exclude name="PEAR.Commenting.ClassComment.MissingLicenseTag"/>
+        <exclude name="PEAR.Commenting.ClassComment.MissingCategoryTag" />
+        <exclude name="PEAR.Commenting.ClassComment.MissingLicenseTag" />
+        <exclude name="PEAR.Commenting.ClassComment.MissingAuthorTag" />
+        <exclude name="PEAR.Commenting.ClassComment.MissingPackageTag" />
+        <exclude name="PEAR.Commenting.ClassComment.MissingLinkTag" />
+    </rule>
+    <file>src</file>
+</ruleset>
