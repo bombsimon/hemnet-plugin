@@ -122,6 +122,12 @@ msgstr ""
 msgid "Display price per m2"
 msgstr ""
 
+msgid "No price information."
+msgstr ""
+
+msgid "month"
+msgstr ""
+
 #. Plugin URI of the plugin/theme
 msgid "https://github.com/bombsimon/hemnet-plugin"
 msgstr ""
