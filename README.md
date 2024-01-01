@@ -57,7 +57,7 @@ in my area.
 ## Development
 
 - Setup [composer](https://getcomposer.org/) by running
-  [`setup_composer.sh`](./seupt_composer.sh).
+  [`setup_composer.sh`](./setup_composer.sh).
 - Install dependencies with `php composer.phar install`
 - Use the [`example.php`](./example.php) to test the Hemnet scraping
 - Use [`docker-compose`](./docker-compose.yaml) to run Wordpress locally
