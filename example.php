@@ -41,7 +41,7 @@ function _printListing($listing)
     echo $listing->url . "\n";
     echo sprintf("%-20s | %s%s\n", "Address", $listing->address(), $floor);
     echo sprintf("%-20s | %s\n", "Price", $listing->formattedPrice());
-    echo sprintf("%-21s | %s\n", "Price per m²", $listing->formattedPricePersQuareMeter());
+    echo sprintf("%-21s | %s\n", "Price per m²", $listing->formattedPricePerSquareMeter());
     echo sprintf("%-20s | %s\n", "Fee", $listing->formattedFee());
     echo sprintf("%-20s | %s\n", "Living area", $listing->formattedLivingArea());
     echo sprintf("%-20s | %s\n", "Rooms", $listing->rooms);

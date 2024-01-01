@@ -1,0 +1,39 @@
+---
+name: Check DOM parsing
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  check_dom_parsing:
+    name: Check DOM parsing
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup PHP with pre-release PECL extension
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          ini-values: zend.assertions=1
+
+      - name: Setup composer
+        uses: php-actions/composer@v6
+        with:
+          dev: no
+
+      - name: Check DOM parsing Hemnet
+        run: php schedule.php
+
+      - uses: JasonEtco/create-an-issue@v2
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          update_existing: true
+          search_existing: open
