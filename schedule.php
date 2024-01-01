@@ -37,8 +37,8 @@ function _assertListing($item, $is_sold = false)
         assert(preg_match("/^\d+$/", $item->floor), "Expected floor to be numeric");
     }
 
-    if (!isset($item->living_bi_area)) {
-        assert(preg_match("/^\d+$/", $item->living_area_bi_area), "Expected living bi area to be numeric");
+    if (isset($item->living_bi_area)) {
+        assert(preg_match("/^\d+$/", $item->living_bi_area), "Expected living bi area to be numeric");
     }
 
     if ($is_sold) {
