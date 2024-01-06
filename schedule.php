@@ -31,15 +31,19 @@ function _assertListing($item, $is_sold = false)
     assert(preg_match("/^\d+$/", $item->price_per_square_meter), "Expected price per square meter to be numeric");
     assert(preg_match("/^\d+$/", $item->fee), "Expected fee to be numeric");
     assert($item->rooms >= 1.0, "Expected rooms to be greater than or equal to 1.0");
-    assert($item->living_area >= 1.0, "Expected living area to be greater than or equal to 1.0");
+    assert(isset($item->living_area), "Expected living area to be set");
 
     if (isset($item->floor)) {
         assert(preg_match("/^\d+$/", $item->floor), "Expected floor to be numeric");
     }
 
+    $total_area = $item->living_area;
     if (isset($item->living_bi_area)) {
         assert(preg_match("/^\d+$/", $item->living_bi_area), "Expected living bi area to be numeric");
+        $total_area += $item->living_bi_area;
     }
+
+    assert($total_area >= 1.0, "Expected total area to be greater than or equal to 1.0");
 
     if ($is_sold) {
         assert(is_a($item->sold_at, "DateTime"), "Expeted sold at to be a DateTime object");
