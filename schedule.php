@@ -39,7 +39,7 @@ function _assertListing($item, $is_sold = false)
 
     $total_area = $item->living_area;
     if (isset($item->living_bi_area)) {
-        assert(preg_match("/^\d+$/", $item->living_bi_area), "Expected living bi area to be numeric");
+        assert(preg_match("/^\d+(\.\d+)?$/", $item->living_bi_area), "Expected living bi area to be numeric");
         $total_area += $item->living_bi_area;
     }
 
