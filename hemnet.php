@@ -84,12 +84,12 @@ class Hemnet
                 continue;
             }
 
-            $price        = $sale_data[0];
-            $living_area  = $sale_data[1];
-            $rooms        = $sale_data[2];
-            $floor        = $sale_data[3];
-            $fee          = $sale_data[4];
-            $price_psqm   = $sale_data[5];
+            $price       = $sale_data[0];
+            $living_area = $sale_data[1];
+            $rooms       = $sale_data[2];
+            $floor       = $sale_data[3];
+            $fee         = $sale_data[4];
+            $price_psqm  = $sale_data[5];
 
             $listings[] = new Listing(
                 sprintf("https://www.hemnet.se%s", $listing_card->href),
@@ -194,6 +194,15 @@ class Hemnet
             }
         }
 
+        $item_types = join(
+            "&",
+            array_map(
+                function ($type) {
+                    return sprintf("item_types[]=%s", $type);
+                },
+                ["villa", "radhus", "bostadsratt", "fritidshus"],
+            ),
+        );
         $location_id_string = join(
             "&",
             array_map(
@@ -204,8 +213,9 @@ class Hemnet
             ),
         );
         $hemnet_address = sprintf(
-            "http://www.hemnet.se/%sbostader?%s",
+            "http://www.hemnet.se/%sbostader?%s&%s",
             $extra,
+            $item_types,
             $location_id_string,
         );
 
