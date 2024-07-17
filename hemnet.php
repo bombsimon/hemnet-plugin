@@ -367,6 +367,10 @@ class Listing
     {
         preg_match("/^(\D+) (\d+)?([A-Z])?(.*)$/", $address, $parsed);
 
+        if (!count($parsed)) {
+            return [null, $address, null, null, null];
+        }
+
         if (!$parsed[4]) {
             return $parsed;
         }
