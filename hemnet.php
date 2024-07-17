@@ -399,7 +399,7 @@ class Listing
      */
     private function _parseFloor(string $floor): int
     {
-        preg_match("/^(?:vån )?(\d+)/i", $floor, $parsed_floor);
+        preg_match("/^(?:vån )?-?(\d+)/i", $floor, $parsed_floor);
         if (!count($parsed_floor) > 1) {
             return null;
         }
