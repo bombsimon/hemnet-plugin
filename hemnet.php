@@ -4,7 +4,7 @@
  * Hemnet is a tool to fetch data from https://www.hemnet.se
  * php version 7
  *
- * @category Wordpres_Plugin
+ * @category Library
  * @package  Hemnet
  * @author   Simon Sawert <simon@sawert.se>
  * @license  https://opensource.org/license/mit/ MIT
@@ -62,7 +62,7 @@ class Hemnet
     {
         $listings = [];
 
-        $html = $this->_getHemnetSource($location_ids, "");
+        $html = $this->_getHemnetSource($location_ids);
         $dom = HtmlDomParser::str_get_html($html);
 
         foreach ($dom->findMulti(".hcl-card") as $listing_card) {
@@ -87,9 +87,9 @@ class Hemnet
             $price       = $sale_data[0];
             $living_area = $sale_data[1];
             $rooms       = $sale_data[2];
-            $floor       = $sale_data[3];
-            $fee         = $sale_data[4];
-            $price_psqm  = $sale_data[5];
+            $floor       = count($sale_data) > 3 ? $sale_data[3] : null;
+            $fee         = count($sale_data) > 4 ? $sale_data[4] : null;
+            $price_psqm  = count($sale_data) > 5 ? $sale_data[5] : null;
 
             $listings[] = new Listing(
                 sprintf("https://www.hemnet.se%s", $listing_card->href),
@@ -135,21 +135,55 @@ class Hemnet
                 continue;
             }
 
-            $sold_data = $listing_card->findMultiOrFalse(".hcl-text");
-            if (!$sold_data) {
+            // There's no static naming of the contents holding the listing
+            // information so it's a real mess to read this out from the DOM. We
+            // simply have to just traverse the DOM from a starting point and
+            // exit early.
+            //
+            // We're looking for two container elements. One holds size, rooms
+            // and fee. The second one holds final price and price change.
+            $container_data = $listing_card->findMultiOrFalse(
+                ".hcl-flex--container"
+            );
+
+            // Ensuire we got bot of the expected elements.
+            if (count($container_data) < 3) {
                 continue;
             }
 
-            if (count($sold_data) < 6) {
+            // In the first node we expect the first child two be a div with
+            // two p elements.
+            $size_info = $container_data[1]->findMultiOrFalse("p");
+            if (count($size_info) < 2) {
                 continue;
             }
 
-            $living_area  = $sold_data[0];
-            $rooms        = $sold_data[1];
-            $fee          = $sold_data[2];
-            $price        = $sold_data[3];
-            $price_change = $sold_data[4];
-            $price_psqm   = $sold_data[5];
+            // And the second element is simply a span with the fee info.
+            $fee_info = $container_data[1]->findOneOrFalse("span");
+            if (!$fee_info) {
+                continue;
+            }
+
+
+            // The information about price and price change are in the first
+            // node as two separate spans.
+            $price_info = $container_data[3]->findMultiOrFalse("span");
+            if (count($price_info) < 2) {
+                continue;
+            }
+
+            // And the price per square meter is within a p node.
+            $price_psqm_info = $container_data[3]->nextSibling();
+            if (!$price_psqm_info) {
+                continue;
+            }
+
+            $living_area  = $size_info[0];
+            $rooms        = $size_info[1];
+            $fee          = $fee_info;
+            $price        = $price_info[0];
+            $price_change = $price_info[1];
+            $price_psqm   = $price_psqm_info;
             $sold_at      = $listing_card->findOneOrFalse(".hcl-label--sold-at");
 
 
@@ -178,8 +212,10 @@ class Hemnet
      *
      * @return string DOM for the desired listing type.
      */
-    private function _getHemnetSource(array $location_ids, string $extra): string
-    {
+    private function _getHemnetSource(
+        array $location_ids,
+        string $extra = ""
+    ): string {
         $last_fetched = $extra
             ? $this->_last_fetched_sold
             : $this->_last_fetched_for_sale;
@@ -213,11 +249,15 @@ class Hemnet
             ),
         );
         $hemnet_address = sprintf(
-            "http://www.hemnet.se/%sbostader?%s&%s",
+            "https://www.hemnet.se/%sbostader?%s&%s",
             $extra,
             $item_types,
             $location_id_string,
         );
+
+        if (getenv("HEMNET_DEBUG")) {
+            echo "$hemnet_address\n";
+        }
 
         $dom = $this->_getSource($hemnet_address);
 
@@ -309,8 +349,8 @@ class Listing
         string $living_area,
         string $rooms,
         ?string $floor,
-        string $fee,
-        string $price_per_square_meter,
+        ?string $fee,
+        ?string $price_per_square_meter,
         ?string $price_change = null,
         ?string $sold_at = null,
     ) {

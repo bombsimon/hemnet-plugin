@@ -4,23 +4,28 @@
 
 require_once "hemnet.php";
 
+define("LOCATION_IDS", [898472]);
+
 $hemnet = new Hemnet();
 
 echo "Checking objects for sale\n";
-$for_sale = $hemnet->getListingsForSale([898472]);
+
+$for_sale = $hemnet->getListingsForSale(LOCATION_IDS);
 assert(count($for_sale) > 0, "Expected to find at least one item for sale");
+
 foreach ($for_sale as $item) {
     _assertListing($item);
 }
 
-echo "Checking sold objects\n";
-$sold = $hemnet->getListingsSold([898472]);
+echo "\nChecking sold objects\n";
+$sold = $hemnet->getListingsSold(LOCATION_IDS);
 assert(count($sold) > 0, "Expected to find at least one sold item");
+
 foreach ($sold as $item) {
     _assertListing($item);
 }
 
-echo "Parsing OK!\n";
+echo "\nParsing OK!\n";
 
 function _assertListing(Listing $item, bool $is_sold = false): void
 {
