@@ -252,6 +252,11 @@ class Hemnet
         $source_code = curl_exec($curl);
         curl_close($curl);
 
+        if (!$source_code) {
+            $err = curl_error($curl);
+            throw new Exception("Failed to get DOM: $err");
+        }
+
         return $source_code;
     }
 }
