@@ -62,14 +62,14 @@ function _assertWithError(Listing $item, bool $is_ok, string $message): void
         return;
     }
 
-    _printListingWithError($item, $message);
+    _printListingWithMessage($item, "⚠️ ASSERTION FAIELD: $message");
     exit(1);
 }
 
 
-function _printListingWithError(Listing $listing, string $message): void
+function _printListingWithMessage(Listing $listing, string $message): void
 {
-    echo "⚠️ ASSERTION FAIELD: $message\n\n";
+    echo "$message\n\n";
 
     $floor = "";
     if (isset($listing->floor) && $listing->floor) {
