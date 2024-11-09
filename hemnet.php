@@ -65,14 +65,14 @@ class Hemnet
         $html = $this->_getHemnetSource($location_ids);
         $dom = HtmlDomParser::str_get_html($html);
 
-        foreach ($dom->findMulti(".hcl-card") as $listing_card) {
+        foreach ($dom->findMulti("div[data-testid=result-list] > a") as $listing_card) {
             // Ads link to external pages and have a target set so we know we
             // can skip them.
             if ($listing_card->target) {
                 continue;
             }
 
-            $address = $listing_card->findOneOrFalse(".hcl-card__title");
+            $address = $listing_card->findOneOrFalse("h2");
             if (!$address) {
                 continue;
             }
@@ -123,14 +123,14 @@ class Hemnet
         $html = $this->_getHemnetSource($location_ids, "salda/");
         $dom = HtmlDomParser::str_get_html($html);
 
-        foreach ($dom->findMulti(".hcl-card") as $listing_card) {
+        foreach ($dom->findMulti("div[data-testid=result-list] > a") as $listing_card) {
             // Ads link to external pages and have a target set so we know we
             // can skip them.
             if ($listing_card->target) {
                 continue;
             }
 
-            $address = $listing_card->findOneOrFalse(".hcl-card__title");
+            $address = $listing_card->findOneOrFalse("h2");
             if (!$address) {
                 continue;
             }
