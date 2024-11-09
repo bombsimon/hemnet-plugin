@@ -146,7 +146,7 @@ class Hemnet
                 ".hcl-flex--container"
             );
 
-            // Ensuire we got bot of the expected elements.
+            // Ensure we got both of the expected elements.
             if (count($container_data) < 3) {
                 continue;
             }
