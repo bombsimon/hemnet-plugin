@@ -65,41 +65,28 @@ class Hemnet
         $html = $this->_getHemnetSource($location_ids);
         $dom = HtmlDomParser::str_get_html($html);
 
-        foreach ($dom->findMulti("div[data-testid=result-list] > a") as $listing_card) {
-            // Ads link to external pages and have a target set so we know we
-            // can skip them.
-            if ($listing_card->target) {
+        $next_data = $dom->findOneOrFalse("script[id=__NEXT_DATA__]");
+        if (!$next_data) {
+            throw new Exception("Failed to fetch Next data");
+        }
+
+        $data = json_decode($next_data->plaintext);
+        $items = $data->props->pageProps->__APOLLO_STATE__;
+
+        foreach ($items as $key => $value) {
+            if (!str_starts_with($key, "ListingCard:")) {
                 continue;
             }
-
-            $address = $listing_card->findOneOrFalse("h2");
-            if (!$address) {
-                continue;
-            }
-
-            $sale_data = $listing_card->findMultiOrFalse(
-                ".hcl-grid--columns-4 > div"
-            );
-            if (!$sale_data) {
-                continue;
-            }
-
-            $price       = $sale_data[0];
-            $living_area = $sale_data[1];
-            $rooms       = $sale_data[2];
-            $floor       = count($sale_data) > 3 ? $sale_data[3] : null;
-            $fee         = count($sale_data) > 4 ? $sale_data[4] : null;
-            $price_psqm  = count($sale_data) > 5 ? $sale_data[5] : null;
 
             $listings[] = new Listing(
-                sprintf("https://www.hemnet.se%s", $listing_card->href),
-                $address->plaintext,
-                $price ? $price->plaintext : null,
-                $living_area ? $living_area->plaintext : null,
-                $rooms ? $rooms->plaintext : null,
-                $floor ? $floor->plaintext : null,
-                $fee ? $fee->plaintext : null,
-                $price_psqm ? $price_psqm->plaintext : null,
+                sprintf("https://www.hemnet.se/bostad/%s", $value->slug),
+                $value->streetAddress,
+                $value->askingPrice,
+                $value->livingAndSupplementalAreas,
+                $value->rooms,
+                $value->floor,
+                $value->fee,
+                $value->squareMeterPrice,
             );
         }
 
@@ -123,81 +110,30 @@ class Hemnet
         $html = $this->_getHemnetSource($location_ids, "salda/");
         $dom = HtmlDomParser::str_get_html($html);
 
-        foreach ($dom->findMulti("div[data-testid=result-list] > a") as $listing_card) {
-            // Ads link to external pages and have a target set so we know we
-            // can skip them.
-            if ($listing_card->target) {
+        $next_data = $dom->findOneOrFalse("script[id=__NEXT_DATA__]");
+        if (!$next_data) {
+            throw new Exception("Failed to fetch Next data");
+        }
+
+        $data = json_decode($next_data->plaintext);
+        $items = $data->props->pageProps->__APOLLO_STATE__;
+
+        foreach ($items as $key => $value) {
+            if (!str_starts_with($key, "SaleCard:")) {
                 continue;
             }
-
-            $address = $listing_card->findOneOrFalse("h2");
-            if (!$address) {
-                continue;
-            }
-
-            // There's no static naming of the contents holding the listing
-            // information so it's a real mess to read this out from the DOM. We
-            // simply have to just traverse the DOM from a starting point and
-            // exit early.
-            //
-            // We're looking for two container elements. One holds size, rooms
-            // and fee. The second one holds final price and price change.
-            $container_data = $listing_card->findMultiOrFalse(
-                ".hcl-flex--container"
-            );
-
-            // Ensure we got both of the expected elements.
-            if (count($container_data) < 3) {
-                continue;
-            }
-
-            // In the first node we expect the first child two be a div with
-            // two p elements.
-            $size_info = $container_data[1]->findMultiOrFalse("p");
-            if (count($size_info) < 2) {
-                continue;
-            }
-
-            // And the second element is simply a span with the fee info.
-            $fee_info = $container_data[1]->findOneOrFalse("span");
-            if (!$fee_info) {
-                continue;
-            }
-
-
-            // The information about price and price change are in the first
-            // node as two separate spans.
-            $price_info = $container_data[3]->findMultiOrFalse("span");
-            if (count($price_info) < 2) {
-                continue;
-            }
-
-            // And the price per square meter is within a p node.
-            $price_psqm_info = $container_data[3]->nextSibling();
-            if (!$price_psqm_info) {
-                continue;
-            }
-
-            $living_area  = $size_info[0];
-            $rooms        = $size_info[1];
-            $fee          = $fee_info;
-            $price        = $price_info[0];
-            $price_change = $price_info[1];
-            $price_psqm   = $price_psqm_info;
-            $sold_at      = $listing_card->findOneOrFalse(".hcl-label--sold-at");
-
 
             $listings[] = new Listing(
-                sprintf("https://www.hemnet.se%s", $listing_card->href),
-                $address->plaintext,
-                $price ? $price->plaintext : null,
-                $living_area ? $living_area->plaintext : null,
-                $rooms ? $rooms->plaintext : null,
-                null, // We don't know floor for sold items.
-                $fee ? $fee->plaintext : null,
-                $price_psqm ? $price_psqm->plaintext : null,
-                $price_change ? $price_change->plaintext : null,
-                $sold_at ? $sold_at->plaintext : null,
+                sprintf("https://www.hemnet.se/salda/%s", $value->slug),
+                $value->streetAddress,
+                $value->askingPrice,
+                $value->livingArea,
+                $value->rooms,
+                property_exists($value, "floor") ? $value->floor : null,
+                $value->fee,
+                $value->squareMeterPrice,
+                $value->priceChange,
+                $value->soldAt,
             );
         }
 
@@ -352,7 +288,7 @@ class Listing
         ?string $fee,
         ?string $price_per_square_meter,
         ?string $price_change = null,
-        ?string $sold_at = null,
+        ?int $sold_at = null,
     ) {
         [
             $_,
@@ -483,39 +419,18 @@ class Listing
     /**
      * Parse the sold date.
      *
-     * Sold date is in an arbitrary Swedish format but we want to use a proper
-     * ISO formatted date.
+     * Convert from a unix timestamp to a date.
      *
-     * @param string $sold_at The original sold at string
+     * @param float $sold_at The original sold at unix time
      *
-     * @return DateTime Object with 00:00 timestamp and no timezone.
+     * @return DateTime object.
      */
-    private function _parseSoldAt(string $sold_at): DateTime
+    private function _parseSoldAt(int $sold_at): DateTime
     {
-        $m = [
-            'jan' => 1,
-            'feb' => 2,
-            'mar' => 3,
-            'apr' => 4,
-            'maj' => 5,
-            'jun' => 6,
-            'jul' => 7,
-            'aug' => 8,
-            'sep' => 9,
-            'okt' => 10,
-            'nov' => 11,
-            'dec' => 12,
-        ];
+        $dt = new DateTime();
+        $dt->setTimestamp($sold_at);
 
-        preg_match('/^Såld (\d+) (\w+). (\d+)$/', $sold_at, $sold_at_parts);
-        $formatted_date = sprintf(
-            '%d-%02d-%02d',
-            $sold_at_parts[3],
-            $m[$sold_at_parts[2]],
-            $sold_at_parts[1],
-        );
-
-        return new DateTime($formatted_date);
+        return $dt;
     }
 
     /**
