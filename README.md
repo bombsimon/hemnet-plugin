@@ -1,3 +1,15 @@
+# ⚠️ NOTE
+
+As of 2025, Hemnet are using some of [Cloudflare's bot
+protection](https://developers.cloudflare.com/bots) to protect from scraping
+like this tool does. I've been parsing DOM and updating the code since 2016 but
+I felt like this was a sign to end maintenance of this repo.
+
+If you're interested in consuming data from Hemnet I think [the official
+API](https://integration.hemnet.se/documentation/v1) is the best way to go.
+
+---
+
 # hemnet-plugin
 
 Hemnet plugin for WordPress
